@@ -2,15 +2,12 @@ import MobileLayout from "@/components/MobileLayout";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { MessageCircle, FileText, ArrowRight, Activity, Settings as SettingsIcon, AlertTriangle } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { mockPatients, journeyResources } from "@/lib/mockData";
-import { useState } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 export default function PatientDashboard() {
   const [, setLocation] = useLocation();
   const patient = mockPatients[0]; // Sarah
-  const [showDisclaimer, setShowDisclaimer] = useState(true); // Should ideally be checked via localStorage
 
   const currentPhaseResources = journeyResources.filter(r => r.phase === patient.phase.toLowerCase().replace(/[\s/]/g, '-') || r.phase === 'all');
 
@@ -22,25 +19,6 @@ export default function PatientDashboard() {
 
   return (
     <MobileLayout title="My Dashboard" headerAction={headerAction}>
-      
-      {/* First Run Disclaimer Modal */}
-      <Dialog open={showDisclaimer} onOpenChange={setShowDisclaimer}>
-        <DialogContent className="w-[90%] sm:max-w-md rounded-2xl p-6">
-          <DialogHeader>
-            <div className="w-12 h-12 bg-accent/20 text-secondary rounded-full flex items-center justify-center mb-4">
-              <AlertTriangle className="w-6 h-6" />
-            </div>
-            <DialogTitle className="text-xl font-display">Important Disclaimer</DialogTitle>
-            
-          </DialogHeader>
-          <DialogFooter className="mt-6">
-            <Button className="w-full bg-primary text-primary-foreground h-12 rounded-xl text-lg" onClick={() => setShowDisclaimer(false)}>
-              I Understand & Agree
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       <div className="p-6 space-y-8">
         
         {/* Welcome & Phase */}
