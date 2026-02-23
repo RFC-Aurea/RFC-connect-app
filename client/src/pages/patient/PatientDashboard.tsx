@@ -9,7 +9,7 @@ export default function PatientDashboard() {
   const [, setLocation] = useLocation();
   const patient = mockPatients[0]; // Sarah
 
-  const currentPhaseResources = journeyResources.filter(r => r.phase === patient.phase.toLowerCase().replace(/[\s/]/g, '-') || r.phase === 'all');
+  const currentPhaseResources = journeyResources.filter(r => r.phase === patient.phase.toLowerCase().replace(/[\s/]/g, '-'));
 
   const headerAction = (
     <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setLocation("/settings")}>
