@@ -1,41 +1,77 @@
 import MobileLayout from "@/components/MobileLayout";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
-import { MessageCircle, Users, AlertCircle, Settings as SettingsIcon } from "lucide-react";
-import { mockMentors, mockPatients } from "@/lib/mockData";
+import { MessageCircle, Users, AlertCircle, Settings as SettingsIcon, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
+
+type Mentee = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  phase: string;
+  assignmentId: number;
+};
+
+function getInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  return (parts[0]?.[0] ?? "").toUpperCase();
+}
 
 export default function MentorDashboard() {
   const [, setLocation] = useLocation();
-  const mentor = mockMentors[0]; // Rachel
-  const assignedPatients = mockPatients.filter(p => p.mentorId === mentor.id);
+  const { user } = useAuth();
+
+  const { data: mentees = [], isLoading } = useQuery<Mentee[]>({
+    queryKey: ["/api/mentor/mentees"],
+  });
 
   const headerAction = (
-    <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setLocation("/settings")}>
+    <Button variant="ghost" size="icon" className="rounded-full" onClick={() => setLocation("/settings")} data-testid="button-settings">
       <SettingsIcon className="w-5 h-5 text-foreground" />
     </Button>
   );
 
+  if (isLoading) {
+    return (
+      <MobileLayout title="Mentor Dashboard" headerAction={headerAction}>
+        <div className="flex items-center justify-center h-64" data-testid="loading-spinner">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </MobileLayout>
+    );
+  }
+
   return (
     <MobileLayout title="Mentor Dashboard" headerAction={headerAction}>
       <div className="p-6 space-y-6">
+
+        {user && (
+          <p className="text-sm text-muted-foreground" data-testid="text-mentor-name">Welcome, {user.name}</p>
+        )}
         
         {/* Mentor Stats */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-primary/10 rounded-2xl p-4 border border-primary/20">
+          <div className="bg-primary/10 rounded-2xl p-4 border border-primary/20" data-testid="stat-active-mentees">
             <Users className="w-5 h-5 text-primary mb-2" />
-            <p className="text-2xl font-semibold text-foreground">{mentor.currentMentees} <span className="text-sm font-normal text-muted-foreground">/ {mentor.capacity}</span></p>
+            <p className="text-2xl font-semibold text-foreground">{mentees.length}</p>
             <p className="text-sm text-muted-foreground font-medium">Active Mentees</p>
           </div>
-          <div className="bg-secondary/10 rounded-2xl p-4 border border-secondary/20">
+          <div className="bg-secondary/10 rounded-2xl p-4 border border-secondary/20" data-testid="stat-unread-messages">
             <MessageCircle className="w-5 h-5 text-secondary mb-2" />
-            <p className="text-2xl font-semibold text-foreground">1</p>
-            <p className="text-sm text-muted-foreground font-medium">Unread Message</p>
+            <p className="text-2xl font-semibold text-foreground">0</p>
+            <p className="text-sm text-muted-foreground font-medium">Unread Messages</p>
           </div>
         </div>
 
         {/* Guidelines Reminder */}
-        <div className="bg-card border border-border shadow-sm rounded-2xl p-4 flex gap-4 cursor-pointer hover:border-primary/30" onClick={() => setLocation("/guidelines")}>
+        <div className="bg-card border border-border shadow-sm rounded-2xl p-4 flex gap-4 cursor-pointer hover:border-primary/30" onClick={() => setLocation("/guidelines")} data-testid="card-guidelines">
           <div className="mt-0.5">
             <AlertCircle className="w-5 h-5 text-secondary" />
           </div>
@@ -50,9 +86,9 @@ export default function MentorDashboard() {
 
         {/* Assigned Patients List */}
         <div>
-          <h3 className="font-semibold text-lg mb-4">Your Mentees</h3>
+          <h3 className="font-semibold text-lg mb-4" data-testid="text-mentees-heading">Your Mentees</h3>
           <div className="space-y-3">
-            {assignedPatients.map((patient, i) => (
+            {mentees.map((patient, i) => (
               <motion.div 
                 key={patient.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -61,21 +97,31 @@ export default function MentorDashboard() {
                 className="bg-card border border-border shadow-sm rounded-2xl p-4 flex items-center justify-between hover:border-primary/30 cursor-pointer transition-colors"
                 onClick={() => setLocation(`/chat/${patient.id}`)}
                 role="button"
+                data-testid={`card-mentee-${patient.id}`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold">
-                    {patient.avatar}
+                  <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold" data-testid={`avatar-mentee-${patient.id}`}>
+                    {getInitials(patient.name)}
                   </div>
                   <div>
-                    <h4 className="font-semibold">{patient.name}</h4>
-                    <p className="text-xs text-muted-foreground">Phase: {patient.phase}</p>
+                    <h4 className="font-semibold" data-testid={`text-mentee-name-${patient.id}`}>{patient.name}</h4>
+                    <p className="text-xs text-muted-foreground" data-testid={`text-mentee-phase-${patient.id}`}>Phase: {patient.phase}</p>
                   </div>
                 </div>
-                <Button size="icon" variant="ghost" className="rounded-full bg-muted text-primary hover:bg-primary hover:text-primary-foreground">
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="rounded-full bg-muted text-primary hover:bg-primary hover:text-primary-foreground"
+                  onClick={(e) => { e.stopPropagation(); setLocation(`/chat/${patient.id}`); }}
+                  data-testid={`button-chat-${patient.id}`}
+                >
                   <MessageCircle className="w-5 h-5" />
                 </Button>
               </motion.div>
             ))}
+            {mentees.length === 0 && (
+              <p className="text-sm text-muted-foreground text-center py-4" data-testid="text-no-mentees">No mentees assigned yet.</p>
+            )}
           </div>
         </div>
       </div>
