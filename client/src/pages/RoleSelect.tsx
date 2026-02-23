@@ -30,9 +30,7 @@ export default function RoleSelect() {
             <h1 className="text-3xl font-display font-semibold tracking-tight text-foreground mb-1">
               RFC Mentor App
             </h1>
-            <p className="text-sm font-medium text-secondary tracking-widest uppercase">
-              Rejuvenating Fertility Clinic
-            </p>
+            <p className="text-sm font-medium text-secondary tracking-widest uppercase">Rejuvenating Fertility Center</p>
           </div>
 
           {/* Value Proposition */}
