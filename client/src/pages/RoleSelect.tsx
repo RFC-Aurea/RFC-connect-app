@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Heart, User, ShieldCheck, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
 
+import logo_with_white_back from "@assets/logo_with_white_back.png";
+
 export default function RoleSelect() {
   const [, setLocation] = useLocation();
 
@@ -18,7 +20,7 @@ export default function RoleSelect() {
           {/* Logo & App Name */}
           <div className="flex flex-col items-center text-center mb-8">
             <div className="w-24 h-24 rounded-full bg-white shadow-sm flex items-center justify-center mb-4 border border-border overflow-hidden">
-              <img src="/src/assets/images/logo.png" alt="RFC Logo" className="w-full h-full object-cover" onError={(e) => {
+              <img src={logo_with_white_back} alt="RFC Logo" className="w-full h-full object-cover" onError={(e) => {
                  // Fallback if image doesn't load immediately
                  e.currentTarget.style.display = 'none';
                  e.currentTarget.parentElement!.innerHTML = '<div class="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center"><Heart class="w-6 h-6 text-primary" /></div>';
