@@ -12,6 +12,8 @@ import MentorDashboard from "@/pages/mentor/MentorDashboard";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import ChatView from "@/pages/shared/ChatView";
 import JourneyHub from "@/pages/shared/JourneyHub";
+import Settings from "@/pages/shared/Settings";
+import { About, PrivacyPolicy, TermsOfUse, CommunityGuidelines } from "@/pages/shared/PolicyPages";
 
 function Router() {
   return (
@@ -30,6 +32,13 @@ function Router() {
       {/* Shared Routes */}
       <Route path="/chat/:userId" component={ChatView} />
       <Route path="/journey" component={JourneyHub} />
+      <Route path="/settings" component={Settings} />
+      
+      {/* Policy Routes */}
+      <Route path="/about" component={About} />
+      <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/terms" component={TermsOfUse} />
+      <Route path="/guidelines" component={CommunityGuidelines} />
 
       <Route component={NotFound} />
     </Switch>
