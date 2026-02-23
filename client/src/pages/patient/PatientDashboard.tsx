@@ -31,11 +31,7 @@ export default function PatientDashboard() {
               <AlertTriangle className="w-6 h-6" />
             </div>
             <DialogTitle className="text-xl font-display">Important Disclaimer</DialogTitle>
-            <DialogDescription className="text-base text-foreground/80 leading-relaxed pt-2">
-              Mentors are peer supporters, <strong>not medical providers</strong>. They cannot give medical advice or review your protocol.
-              <br/><br/>
-              If you are experiencing severe symptoms (e.g., fever, heavy bleeding, extreme pain), please contact your Rejuvenating Fertility Clinic care team directly or call 911 in an emergency.
-            </DialogDescription>
+            
           </DialogHeader>
           <DialogFooter className="mt-6">
             <Button className="w-full bg-primary text-primary-foreground h-12 rounded-xl text-lg" onClick={() => setShowDisclaimer(false)}>
