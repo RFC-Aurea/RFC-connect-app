@@ -4,3 +4,12 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+.env
+.env.*
+.replit
+.local/
+.agents/
+.config/
+cookies.txt
+replit.md
+*.tar.gz
