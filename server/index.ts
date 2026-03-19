@@ -1,6 +1,9 @@
 import express, { type Request, Response, NextFunction } from "express";
+import path from "path";
 import { registerRoutes } from "./routes";
+import { initializeSocket } from "./socket";
 import { serveStatic } from "./static";
+import { storageEnabled } from "./upload";
 import { createServer } from "http";
 
 const app = express();
@@ -21,6 +24,11 @@ app.use(
 );
 
 app.use(express.urlencoded({ extended: false }));
+
+// Serve locally-uploaded files in dev (when R2 is not configured)
+if (!storageEnabled) {
+  app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
+}
 
 export function log(message: string, source = "express") {
   const formattedTime = new Date().toLocaleTimeString("en-US", {
@@ -63,6 +71,7 @@ app.use((req, res, next) => {
   const { seed } = await import("./seed");
   await seed();
   await registerRoutes(httpServer, app);
+  initializeSocket(httpServer);
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

@@ -1,13 +1,18 @@
 import { eq, and, or, desc } from "drizzle-orm";
 import { db } from "./db";
 import {
-  users, mentorAssignments, patientPhases, messages, reports, resources,
+  users, mentorAssignments, patientPhases, messages, reports, resources, refreshTokens,
+  notifications, auditLog, chatAttachments,
   type User, type InsertUser,
   type MentorAssignment, type InsertMentorAssignment,
   type PatientPhase, type InsertPatientPhase,
   type Message, type InsertMessage,
   type Report, type InsertReport,
   type Resource, type InsertResource,
+  type RefreshToken, type InsertRefreshToken,
+  type Notification, type InsertNotification,
+  type AuditLog, type InsertAuditLog,
+  type ChatAttachment, type InsertChatAttachment,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -35,6 +40,24 @@ export interface IStorage {
   getResources(): Promise<Resource[]>;
   getResourcesByPhase(phase: string): Promise<Resource[]>;
   createResource(resource: InsertResource): Promise<Resource>;
+
+  getUserByUsername(username: string): Promise<User | undefined>;
+  deleteAssignmentsByUserId(userId: number): Promise<void>;
+
+  createRefreshToken(data: InsertRefreshToken): Promise<RefreshToken>;
+  getRefreshTokenByHash(hash: string): Promise<RefreshToken | undefined>;
+  deleteRefreshTokenByHash(hash: string): Promise<void>;
+
+  createAuditLog(entry: InsertAuditLog): Promise<AuditLog>;
+  getAuditLogs(limit?: number): Promise<AuditLog[]>;
+
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getNotificationsByUser(userId: number): Promise<Notification[]>;
+  markNotificationRead(id: number): Promise<void>;
+
+  createChatAttachment(attachment: InsertChatAttachment): Promise<ChatAttachment>;
+  getChatAttachmentsByMessage(messageId: number): Promise<ChatAttachment[]>;
+  linkAttachmentToMessage(attachmentId: number, messageId: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -137,6 +160,76 @@ export class DatabaseStorage implements IStorage {
   async createResource(resource: InsertResource): Promise<Resource> {
     const [created] = await db.insert(resources).values(resource).returning();
     return created;
+  }
+
+  async createRefreshToken(data: InsertRefreshToken): Promise<RefreshToken> {
+    const [created] = await db.insert(refreshTokens).values(data).returning();
+    return created;
+  }
+
+  async getRefreshTokenByHash(hash: string): Promise<RefreshToken | undefined> {
+    const [token] = await db.select().from(refreshTokens).where(eq(refreshTokens.tokenHash, hash));
+    return token;
+  }
+
+  async deleteRefreshTokenByHash(hash: string): Promise<void> {
+    await db.delete(refreshTokens).where(eq(refreshTokens.tokenHash, hash));
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async deleteAssignmentsByUserId(userId: number): Promise<void> {
+    await db.delete(mentorAssignments).where(
+      or(
+        eq(mentorAssignments.mentorId, userId),
+        eq(mentorAssignments.patientId, userId),
+      ),
+    );
+  }
+
+  async createAuditLog(entry: InsertAuditLog): Promise<AuditLog> {
+    const [created] = await db.insert(auditLog).values(entry).returning();
+    return created;
+  }
+
+  async getAuditLogs(limit?: number): Promise<AuditLog[]> {
+    const query = db.select().from(auditLog).orderBy(desc(auditLog.createdAt));
+    if (limit) return query.limit(limit);
+    return query;
+  }
+
+  async createNotification(notification: InsertNotification): Promise<Notification> {
+    const [created] = await db.insert(notifications).values(notification).returning();
+    return created;
+  }
+
+  async getNotificationsByUser(userId: number): Promise<Notification[]> {
+    return db.select().from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationRead(id: number): Promise<void> {
+    await db.update(notifications).set({ read: true }).where(eq(notifications.id, id));
+  }
+
+  async createChatAttachment(attachment: InsertChatAttachment): Promise<ChatAttachment> {
+    const [created] = await db.insert(chatAttachments).values(attachment).returning();
+    return created;
+  }
+
+  async getChatAttachmentsByMessage(messageId: number): Promise<ChatAttachment[]> {
+    return db.select().from(chatAttachments).where(eq(chatAttachments.messageId, messageId));
+  }
+
+  async linkAttachmentToMessage(attachmentId: number, messageId: number): Promise<void> {
+    await db
+      .update(chatAttachments)
+      .set({ messageId })
+      .where(eq(chatAttachments.id, attachmentId));
   }
 }
 

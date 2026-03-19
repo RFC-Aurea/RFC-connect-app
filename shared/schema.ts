@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -24,7 +24,13 @@ export const users = pgTable("users", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
+  username: text("username").unique(),
   password: text("password").notNull(),
+  phone: text("phone"),
+  phoneVerified: boolean("phone_verified").notNull().default(false),
+  mustChangePassword: boolean("must_change_password").notNull().default(false),
+  apnsDeviceToken: text("apns_device_token"),
+  profileImageUrl: text("profile_image_url"),
   role: roleEnum("role").notNull().default("patient"),
   status: userStatusEnum("status").notNull().default("active"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -51,6 +57,7 @@ export const messages = pgTable("messages", {
   senderId: integer("sender_id").notNull().references(() => users.id),
   receiverId: integer("receiver_id").notNull().references(() => users.id),
   content: text("content").notNull(),
+  messageType: text("message_type").notNull().default("text"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -76,19 +83,68 @@ export const resources = pgTable("resources", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const refreshTokens = pgTable("refresh_tokens", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  tokenHash: text("token_hash").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const chatAttachments = pgTable("chat_attachments", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  messageId: integer("message_id").references(() => messages.id),
+  type: text("type").notNull(),
+  fileUrl: text("file_url").notNull(),
+  fileName: text("file_name"),
+  fileSize: integer("file_size"),
+  durationSeconds: integer("duration_seconds"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const notifications = pgTable("notifications", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  read: boolean("read").notNull().default(false),
+  dataJson: text("data_json"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const auditLog = pgTable("audit_log", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  actorId: integer("actor_id").notNull().references(() => users.id),
+  action: text("action").notNull(),
+  targetId: integer("target_id"),
+  details: text("details"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const loginSchema = z.object({ email: z.string().email(), password: z.string().min(6) });
 
 export type User = typeof users.$inferSelect;
+export type RefreshToken = typeof refreshTokens.$inferSelect;
 export type MentorAssignment = typeof mentorAssignments.$inferSelect;
 export type PatientPhase = typeof patientPhases.$inferSelect;
 export type Message = typeof messages.$inferSelect;
 export type Report = typeof reports.$inferSelect;
 export type Resource = typeof resources.$inferSelect;
+export type ChatAttachment = typeof chatAttachments.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
+export type AuditLog = typeof auditLog.$inferSelect;
 
 export type InsertUser = {
   name: string;
   email: string;
   password: string;
+  username?: string | null;
+  phone?: string | null;
+  phoneVerified?: boolean;
+  mustChangePassword?: boolean;
+  apnsDeviceToken?: string | null;
+  profileImageUrl?: string | null;
   role?: "patient" | "mentor" | "admin";
   status?: "active" | "inactive" | "pending";
 };
@@ -109,6 +165,7 @@ export type InsertMessage = {
   senderId: number;
   receiverId: number;
   content: string;
+  messageType?: string;
 };
 
 export type InsertReport = {
@@ -126,4 +183,35 @@ export type InsertResource = {
   content?: string | null;
   readTime?: string | null;
   createdBy?: number | null;
+};
+
+export type InsertRefreshToken = {
+  userId: number;
+  tokenHash: string;
+  expiresAt: Date;
+};
+
+export type InsertChatAttachment = {
+  messageId?: number | null;
+  type: string;
+  fileUrl: string;
+  fileName?: string | null;
+  fileSize?: number | null;
+  durationSeconds?: number | null;
+};
+
+export type InsertNotification = {
+  userId: number;
+  type: string;
+  title: string;
+  body: string;
+  read?: boolean;
+  dataJson?: string | null;
+};
+
+export type InsertAuditLog = {
+  actorId: number;
+  action: string;
+  targetId?: number | null;
+  details?: string | null;
 };

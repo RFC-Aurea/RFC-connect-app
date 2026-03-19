@@ -6,7 +6,8 @@ import { promisify } from "util";
 import type { Express, RequestHandler } from "express";
 import { storage } from "./storage";
 import { type User } from "@shared/schema";
-import MemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
+import { authenticateToken, resolveAuthUser } from "./jwt";
 
 const scryptAsync = promisify(scrypt);
 
@@ -16,7 +17,7 @@ async function hashPassword(password: string): Promise<string> {
   return `${buf.toString("hex")}.${salt}`;
 }
 
-async function comparePasswords(supplied: string, stored: string): Promise<boolean> {
+export async function comparePasswords(supplied: string, stored: string): Promise<boolean> {
   const [hashed, salt] = stored.split(".");
   const buf = (await scryptAsync(supplied, salt, 64)) as Buffer;
   return timingSafeEqual(buf, Buffer.from(hashed, "hex"));
@@ -37,18 +38,18 @@ declare global {
 }
 
 export function setupAuth(app: Express): void {
-  const MemStore = MemoryStore(session);
+  const PgSession = connectPgSimple(session);
 
   const sessionMiddleware = session({
     secret: process.env.SESSION_SECRET || "rfc-mentor-app-secret-key-change-in-production",
     resave: false,
     saveUninitialized: false,
-    store: new MemStore({ checkPeriod: 86400000 }),
+    store: new PgSession({ conString: process.env.DATABASE_URL }),
     cookie: {
       maxAge: 24 * 60 * 60 * 1000,
       httpOnly: true,
       sameSite: "lax",
-      secure: false,
+      secure: process.env.NODE_ENV === "production",
     },
   });
 
@@ -151,14 +152,19 @@ export function setupAuth(app: Express): void {
   });
 }
 
-export const requireAuth: RequestHandler = (req, res, next) => {
-  if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-  next();
-};
+export const requireAuth: RequestHandler = authenticateToken;
 
-export const requireRole = (...roles: string[]): RequestHandler => (req, res, next) => {
-  if (!req.isAuthenticated()) return res.status(401).json({ message: "Not authenticated" });
-  if (!roles.includes(req.user!.role)) return res.status(403).json({ message: "Forbidden" });
+export const requireRole = (...roles: string[]): RequestHandler => async (req, res, next) => {
+  const result = await resolveAuthUser(req);
+  if (!result.ok) {
+    res.status(result.status).json({ message: result.message });
+    return;
+  }
+  req.user = result.user;
+  if (!roles.includes(req.user.role)) {
+    res.status(403).json({ message: "Forbidden" });
+    return;
+  }
   next();
 };
 
