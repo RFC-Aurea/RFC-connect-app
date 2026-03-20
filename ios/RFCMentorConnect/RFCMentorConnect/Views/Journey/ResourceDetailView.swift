@@ -38,7 +38,7 @@ struct ResourceDetailView: View {
                             .foregroundColor(.secondary)
 
                         if let readTime = resource.readTime {
-                            Label("\(readTime) min read", systemImage: "clock")
+                            Label(readTime, systemImage: "clock")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -60,23 +60,6 @@ struct ResourceDetailView: View {
                         .background(Color.white)
                         .cornerRadius(16)
                         .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
-                    }
-
-                    // RFC link
-                    if let urlStr = resource.url, let url = URL(string: urlStr) {
-                        Link(destination: url) {
-                            HStack {
-                                Image(systemName: "link")
-                                Text("View on RFC Website")
-                                    .font(.subheadline.bold())
-                                Spacer()
-                                Image(systemName: "arrow.up.right")
-                            }
-                            .padding(16)
-                            .background(Color(hex: "1B4332"))
-                            .foregroundColor(.white)
-                            .cornerRadius(14)
-                        }
                     }
 
                     // Disclaimer

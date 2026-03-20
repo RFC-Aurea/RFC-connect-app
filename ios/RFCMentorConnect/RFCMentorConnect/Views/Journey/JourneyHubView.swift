@@ -134,7 +134,7 @@ struct JourneyHubView: View {
                                         .font(.subheadline)
                                         .foregroundColor(.primary)
                                     if let readTime = resource.readTime {
-                                        Text("\(readTime) min")
+                                        Text(readTime)
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
@@ -179,7 +179,7 @@ struct JourneyHubView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(2)
                 if let readTime = resource.readTime {
-                    Text("\(readTime) min read")
+                    Text(readTime)
                         .font(.caption2)
                         .foregroundColor(Color(hex: "B8860B"))
                 }
@@ -210,7 +210,7 @@ struct JourneyHubView: View {
         isLoading = true
         do {
             resources = try await APIClient.shared.getResources()
-        } catch {}
+        } catch { print("Failed to load resources: \(error)") }
         isLoading = false
     }
 }

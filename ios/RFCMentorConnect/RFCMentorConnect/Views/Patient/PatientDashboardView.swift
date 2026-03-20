@@ -205,7 +205,7 @@ struct PatientDashboardView: View {
                     .foregroundColor(.secondary)
                     .lineLimit(2)
                 if let readTime = resource.readTime {
-                    Text("\(readTime) min read")
+                    Text(readTime)
                         .font(.caption2)
                         .foregroundColor(Color(hex: "B8860B"))
                 }

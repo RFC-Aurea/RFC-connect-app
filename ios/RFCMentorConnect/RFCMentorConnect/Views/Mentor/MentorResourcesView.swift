@@ -109,7 +109,7 @@ struct MentorResourcesView: View {
                                         .font(.subheadline)
                                         .foregroundColor(.primary)
                                     if let readTime = resource.readTime {
-                                        Text("\(readTime) min")
+                                        Text(readTime)
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
@@ -150,7 +150,7 @@ struct MentorResourcesView: View {
         isLoading = true
         do {
             resources = try await APIClient.shared.getResources()
-        } catch {}
+        } catch { print("Failed to load resources: \(error)") }
         isLoading = false
     }
 }

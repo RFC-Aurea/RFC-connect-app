@@ -8,6 +8,7 @@ struct Resource: Codable, Identifiable {
     let type: String
     let summary: String
     let content: String?
-    let readTime: Int?
-    let url: String?
+    let readTime: String?
+    let createdBy: Int?
+    let createdAt: String?
 }
