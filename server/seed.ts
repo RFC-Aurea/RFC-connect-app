@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { users, resources, patientPhases, mentorAssignments } from "@shared/schema";
+import { users, resources, patientPhases, mentorAssignments, messages, reports, chatAttachments, notifications, auditLog, refreshTokens } from "@shared/schema";
 import { scrypt, randomBytes } from "crypto";
 import { promisify } from "util";
 import { eq } from "drizzle-orm";
@@ -641,69 +641,16 @@ Whatever you decide, there is no wrong answer — only the answer that aligns wi
   },
 ];
 
-export async function seed() {
-  console.log("Seeding database...");
-
-  const existingAdmin = await db.select().from(users).where(eq(users.email, "admin@rfc.com"));
-  if (existingAdmin.length > 0) {
-    console.log("Database already seeded.");
-    return;
-  }
-
-  const adminPass = await hashPassword("admin123");
-  const mentorPass = await hashPassword("mentor123");
-  const patientPass = await hashPassword("patient123");
+async function createAdminAndResources() {
+  const adminPass = await hashPassword("RFCadmin2026!");
 
   const [admin] = await db.insert(users).values({
-    name: "Clinic Admin",
-    email: "admin@rfc.com",
+    name: "Alifiya Batterywala",
+    email: "alifiyab@rfcfertility.com",
     password: adminPass,
     role: "admin",
     status: "active",
   }).returning();
-
-  const [mentor1] = await db.insert(users).values({
-    name: "Rachel Moore",
-    email: "rachel@rfc.com",
-    password: mentorPass,
-    role: "mentor",
-    status: "active",
-  }).returning();
-
-  const [mentor2] = await db.insert(users).values({
-    name: "Chloe Davis",
-    email: "chloe@rfc.com",
-    password: mentorPass,
-    role: "mentor",
-    status: "active",
-  }).returning();
-
-  const [patient1] = await db.insert(users).values({
-    name: "Sarah Jenkins",
-    email: "sarah@example.com",
-    password: patientPass,
-    role: "patient",
-    status: "active",
-  }).returning();
-
-  const [patient2] = await db.insert(users).values({
-    name: "Emily Chen",
-    email: "emily@example.com",
-    password: patientPass,
-    role: "patient",
-    status: "active",
-  }).returning();
-
-  await db.insert(patientPhases).values([
-    { patientId: patient1.id, currentPhase: "Stimulation", lastUpdatedBy: admin.id },
-    { patientId: patient2.id, currentPhase: "Pre-Consult & Decision", lastUpdatedBy: admin.id },
-  ]);
-
-  await db.insert(mentorAssignments).values({
-    mentorId: mentor1.id,
-    patientId: patient1.id,
-    assignedBy: admin.id,
-  });
 
   for (const resource of seedResources) {
     await db.insert(resources).values({
@@ -713,9 +660,52 @@ export async function seed() {
   }
 
   console.log("Seed complete!");
-  console.log(`Admin: admin@rfc.com / admin123`);
-  console.log(`Mentor: rachel@rfc.com / mentor123`);
-  console.log(`Patient: sarah@example.com / patient123`);
+  console.log(`Admin: alifiyab@rfcfertility.com / RFCadmin2026!`);
+}
+
+export async function seed() {
+  console.log("Seeding database...");
+
+  const existingAdmin = await db.select().from(users).where(eq(users.email, "alifiyab@rfcfertility.com"));
+  if (existingAdmin.length > 0) {
+    console.log("Database already seeded.");
+    return;
+  }
+
+  await createAdminAndResources();
+}
+
+export async function resetAndReseed() {
+  if (process.env.RESET_SEED !== "true") {
+    return;
+  }
+
+  console.log("RESET_SEED=true detected — wiping existing data and reseeding...");
+
+  console.log("  Deleting mentor_assignments...");
+  await db.delete(mentorAssignments);
+  console.log("  Deleting patient_phases...");
+  await db.delete(patientPhases);
+  console.log("  Deleting messages...");
+  await db.delete(messages);
+  console.log("  Deleting reports...");
+  await db.delete(reports);
+  console.log("  Deleting chat_attachments...");
+  await db.delete(chatAttachments);
+  console.log("  Deleting notifications...");
+  await db.delete(notifications);
+  console.log("  Deleting audit_log...");
+  await db.delete(auditLog);
+  console.log("  Deleting refresh_tokens...");
+  await db.delete(refreshTokens);
+  console.log("  Deleting resources...");
+  await db.delete(resources);
+  console.log("  Deleting users...");
+  await db.delete(users);
+
+  console.log("All demo data cleared. Running fresh seed...");
+  await createAdminAndResources();
+  console.log("Reset and reseed complete. Remove RESET_SEED from environment variables.");
 }
 
 export async function seedResourcesIfEmpty() {
@@ -725,7 +715,7 @@ export async function seedResourcesIfEmpty() {
     return;
   }
 
-  const adminRows = await db.select().from(users).where(eq(users.email, "admin@rfc.com"));
+  const adminRows = await db.select().from(users).where(eq(users.email, "alifiyab@rfcfertility.com"));
   if (adminRows.length === 0) {
     console.log("Admin user not found, cannot seed resources.");
     return;

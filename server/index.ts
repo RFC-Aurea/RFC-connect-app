@@ -68,7 +68,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const { seed, seedResourcesIfEmpty } = await import("./seed");
+  const { seed, seedResourcesIfEmpty, resetAndReseed } = await import("./seed");
+  await resetAndReseed();
   await seed();
   await seedResourcesIfEmpty();
   await registerRoutes(httpServer, app);
