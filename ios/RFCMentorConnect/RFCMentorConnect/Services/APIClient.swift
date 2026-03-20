@@ -1,0 +1,231 @@
+import Foundation
+
+enum APIError: LocalizedError {
+    case invalidURL
+    case noData
+    case decodingError(Error)
+    case serverError(Int, String)
+    case unauthorized
+    case networkError(Error)
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL: return "Invalid URL"
+        case .noData: return "No data received"
+        case .decodingError(let e): return "Decoding error: \(e.localizedDescription)"
+        case .serverError(let code, let msg): return "Server error \(code): \(msg)"
+        case .unauthorized: return "Unauthorized"
+        case .networkError(let e): return e.localizedDescription
+        }
+    }
+}
+
+final class APIClient {
+    static let shared = APIClient()
+    let baseURL = "https://rfc-connect-app-production.up.railway.app"
+
+    private let session: URLSession
+    private let decoder: JSONDecoder
+    private let encoder: JSONEncoder
+
+    private init() {
+        session = URLSession.shared
+        decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        encoder = JSONEncoder()
+        encoder.keyEncodingStrategy = .convertToSnakeCase
+    }
+
+    private func request(_ path: String, method: String = "GET", body: [String: Any]? = nil) async throws -> (Data, URLResponse) {
+        guard let url = URL(string: baseURL + path) else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = method
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let token = KeychainHelper.shared.read(for: "accessToken") {
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        if let body = body {
+            req.httpBody = try JSONSerialization.data(withJSONObject: body)
+        }
+        do {
+            let result = try await session.data(for: req)
+            return result
+        } catch {
+            throw APIError.networkError(error)
+        }
+    }
+
+    private func requestWithRetry(_ path: String, method: String = "GET", body: [String: Any]? = nil) async throws -> Data {
+        let (data, response) = try await request(path, method: method, body: body)
+        guard let http = response as? HTTPURLResponse else { throw APIError.noData }
+
+        if http.statusCode == 401 {
+            // Try token refresh
+            if try await refreshToken() {
+                let (retryData, retryResponse) = try await request(path, method: method, body: body)
+                guard let retryHttp = retryResponse as? HTTPURLResponse else { throw APIError.noData }
+                if retryHttp.statusCode == 401 { throw APIError.unauthorized }
+                return try validate(retryData, statusCode: retryHttp.statusCode)
+            } else {
+                throw APIError.unauthorized
+            }
+        }
+        return try validate(data, statusCode: http.statusCode)
+    }
+
+    private func validate(_ data: Data, statusCode: Int) throws -> Data {
+        guard (200..<300).contains(statusCode) else {
+            let msg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["message"] as? String ?? "Unknown error"
+            throw APIError.serverError(statusCode, msg)
+        }
+        return data
+    }
+
+    private func decode<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        do {
+            return try decoder.decode(T.self, from: data)
+        } catch {
+            throw APIError.decodingError(error)
+        }
+    }
+
+    // MARK: - Auth
+
+    struct LoginResponse: Codable {
+        let accessToken: String?
+        let refreshToken: String?
+        let user: User?
+        let requiresVerification: Bool?
+        let message: String?
+    }
+
+    func login(email: String, password: String) async throws -> LoginResponse {
+        let data = try await requestWithRetry("/api/auth/login", method: "POST", body: ["email": email, "password": password])
+        return try decode(LoginResponse.self, from: data)
+    }
+
+    @discardableResult
+    func refreshToken() async throws -> Bool {
+        guard let refresh = KeychainHelper.shared.read(for: "refreshToken") else { return false }
+        guard let url = URL(string: baseURL + "/api/auth/refresh") else { return false }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["refreshToken": refresh])
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return false }
+        struct RefreshResp: Codable { let accessToken: String }
+        if let resp = try? decoder.decode(RefreshResp.self, from: data) {
+            KeychainHelper.shared.save(resp.accessToken, for: "accessToken")
+            return true
+        }
+        return false
+    }
+
+    func sendVerification(phone: String) async throws {
+        _ = try await requestWithRetry("/api/auth/send-verification", method: "POST", body: ["phone": phone])
+    }
+
+    func verifyPhone(code: String) async throws {
+        _ = try await requestWithRetry("/api/auth/verify-phone", method: "POST", body: ["code": code])
+    }
+
+    func changePassword(currentPassword: String, newPassword: String) async throws {
+        _ = try await requestWithRetry("/api/auth/change-password", method: "POST", body: ["currentPassword": currentPassword, "newPassword": newPassword])
+    }
+
+    func getMe() async throws -> User {
+        let data = try await requestWithRetry("/api/auth/me")
+        return try decode(User.self, from: data)
+    }
+
+    // MARK: - Admin
+
+    func getAdminOverview() async throws -> AdminOverview {
+        let data = try await requestWithRetry("/api/admin/overview")
+        return try decode(AdminOverview.self, from: data)
+    }
+
+    func createUser(name: String, email: String, role: String) async throws -> CreateUserResponse {
+        let data = try await requestWithRetry("/api/admin/users", method: "POST", body: ["name": name, "email": email, "role": role])
+        return try decode(CreateUserResponse.self, from: data)
+    }
+
+    func assignMentor(patientId: Int, mentorId: Int) async throws {
+        _ = try await requestWithRetry("/api/admin/assign-mentor", method: "POST", body: ["patientId": patientId, "mentorId": mentorId])
+    }
+
+    func updatePhase(patientId: Int, phase: String) async throws {
+        _ = try await requestWithRetry("/api/admin/patients/\(patientId)/phase", method: "PATCH", body: ["phase": phase])
+    }
+
+    // MARK: - Patient
+
+    struct PatientDashboard: Codable {
+        let user: User
+        let mentor: MentorSummary?
+        let resources: [Resource]?
+    }
+
+    func getPatientDashboard() async throws -> PatientDashboard {
+        let data = try await requestWithRetry("/api/patient/dashboard")
+        return try decode(PatientDashboard.self, from: data)
+    }
+
+    // MARK: - Mentor
+
+    func getMentorMentees() async throws -> [PatientSummary] {
+        let data = try await requestWithRetry("/api/mentor/mentees")
+        return try decode([PatientSummary].self, from: data)
+    }
+
+    // MARK: - Messages
+
+    func getMessages(with userId: Int) async throws -> [Message] {
+        let data = try await requestWithRetry("/api/messages/\(userId)")
+        return try decode([Message].self, from: data)
+    }
+
+    func sendMessage(to userId: Int, content: String, messageType: String = "text") async throws -> Message {
+        let data = try await requestWithRetry("/api/messages", method: "POST", body: ["receiverId": userId, "content": content, "messageType": messageType])
+        return try decode(Message.self, from: data)
+    }
+
+    func reportMessage(messageId: Int) async throws {
+        _ = try await requestWithRetry("/api/messages/\(messageId)/report", method: "POST")
+    }
+
+    // MARK: - Resources
+
+    func getResources(phase: String? = nil) async throws -> [Resource] {
+        var path = "/api/resources"
+        if let phase = phase { path += "?phase=\(phase)" }
+        let data = try await requestWithRetry(path)
+        return try decode([Resource].self, from: data)
+    }
+
+    // MARK: - File Upload
+
+    func uploadFile(data fileData: Data, fileName: String, mimeType: String) async throws -> ChatAttachment {
+        guard let url = URL(string: baseURL + "/api/upload") else { throw APIError.invalidURL }
+        let boundary = UUID().uuidString
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        if let token = KeychainHelper.shared.read(for: "accessToken") {
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        req.httpBody = body
+        let (respData, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw APIError.serverError(0, "Upload failed")
+        }
+        return try decode(ChatAttachment.self, from: respData)
+    }
+}
