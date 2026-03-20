@@ -163,8 +163,10 @@ final class APIClient {
 
     struct PatientDashboard: Codable {
         let user: User
+        let phase: String?
         let mentor: MentorSummary?
         let resources: [Resource]?
+        let assignmentId: Int?
     }
 
     func getPatientDashboard() async throws -> PatientDashboard {

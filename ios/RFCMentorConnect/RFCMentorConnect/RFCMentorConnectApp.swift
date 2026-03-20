@@ -85,8 +85,8 @@ struct RoleTabView: View {
             TabView {
                 MentorDashboardView()
                     .tabItem { Label("Dashboard", systemImage: "person.2.fill") }
-                JourneyHubView()
-                    .tabItem { Label("Journey", systemImage: "map.fill") }
+                MentorResourcesView()
+                    .tabItem { Label("Resources", systemImage: "books.vertical.fill") }
                 SettingsView()
                     .tabItem { Label("Settings", systemImage: "gear") }
             }

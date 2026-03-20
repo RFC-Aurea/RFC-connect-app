@@ -1,7 +1,6 @@
 import SwiftUI
 
-struct JourneyHubView: View {
-    @EnvironmentObject var auth: AuthService
+struct MentorResourcesView: View {
     @State private var resources: [Resource] = []
     @State private var isLoading = true
     @State private var expandedPhase: String?
@@ -16,15 +15,6 @@ struct JourneyHubView: View {
         resources.filter { $0.phase == phase }
     }
 
-    var currentPhase: String? {
-        auth.currentUser?.phase
-    }
-
-    var currentPhaseResources: [Resource] {
-        guard let phase = currentPhase else { return [] }
-        return resources(for: phase)
-    }
-
     var body: some View {
         NavigationStack {
             ZStack {
@@ -34,41 +24,34 @@ struct JourneyHubView: View {
                 } else {
                     ScrollView {
                         VStack(spacing: 20) {
-                            // Current phase resources
-                            if let phase = currentPhase, !currentPhaseResources.isEmpty {
-                                currentPhaseSection(phase: phase)
-                            }
-
-                            // All phases
+                            headerCard
                             allPhasesSection
                         }
                         .padding(.bottom, 24)
                     }
                 }
             }
-            .navigationTitle("Journey Hub")
+            .navigationTitle("Resources")
             .navigationBarTitleDisplayMode(.large)
             .task { await loadResources() }
         }
     }
 
-    private func currentPhaseSection(phase: String) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: "star.fill")
-                    .foregroundColor(Color(hex: "B8860B"))
-                Text("Your Phase: \(phase)")
-                    .font(.headline)
-                    .foregroundColor(Color(hex: "1B4332"))
-            }
-            .padding(.horizontal, 16)
-
-            ForEach(currentPhaseResources) { resource in
-                NavigationLink(destination: ResourceDetailView(resource: resource)) {
-                    resourceCard(resource: resource)
-                }
-            }
+    private var headerCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Patient Resource Library")
+                .font(.headline)
+                .foregroundColor(Color(hex: "1B4332"))
+            Text("Reference materials your patients can access")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(Color.white)
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
+        .padding(.horizontal, 16)
     }
 
     private var allPhasesSection: some View {
@@ -86,7 +69,6 @@ struct JourneyHubView: View {
     private func phaseAccordion(phase: String) -> some View {
         let phaseResources = resources(for: phase)
         let isExpanded = expandedPhase == phase
-        let isCurrent = currentPhase == phase
 
         return VStack(spacing: 0) {
             Button(action: {
@@ -96,16 +78,9 @@ struct JourneyHubView: View {
             }) {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            if isCurrent {
-                                Image(systemName: "location.fill")
-                                    .font(.caption)
-                                    .foregroundColor(Color(hex: "B8860B"))
-                            }
-                            Text(phase)
-                                .font(.subheadline.bold())
-                                .foregroundColor(.primary)
-                        }
+                        Text(phase)
+                            .font(.subheadline.bold())
+                            .foregroundColor(.primary)
                         Text("\(phaseResources.count) resource\(phaseResources.count == 1 ? "" : "s")")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -116,7 +91,7 @@ struct JourneyHubView: View {
                         .foregroundColor(.secondary)
                 }
                 .padding(16)
-                .background(isCurrent ? Color(hex: "1B4332").opacity(0.05) : Color.white)
+                .background(Color.white)
             }
             .buttonStyle(.plain)
 
@@ -155,41 +130,6 @@ struct JourneyHubView: View {
                 }
             }
         }
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
-        .padding(.horizontal, 16)
-    }
-
-    private func resourceCard(resource: Resource) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: resourceIcon(resource.type))
-                .font(.title3)
-                .foregroundColor(Color(hex: "1B4332"))
-                .frame(width: 44, height: 44)
-                .background(Color(hex: "1B4332").opacity(0.1))
-                .cornerRadius(10)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(resource.title)
-                    .font(.subheadline.bold())
-                    .foregroundColor(.primary)
-                Text(resource.summary)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
-                if let readTime = resource.readTime {
-                    Text("\(readTime) min read")
-                        .font(.caption2)
-                        .foregroundColor(Color(hex: "B8860B"))
-                }
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .padding(16)
         .background(Color.white)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.05), radius: 4, y: 2)

@@ -717,3 +717,27 @@ export async function seed() {
   console.log(`Mentor: rachel@rfc.com / mentor123`);
   console.log(`Patient: sarah@example.com / patient123`);
 }
+
+export async function seedResourcesIfEmpty() {
+  const existing = await db.select().from(resources);
+  if (existing.length > 0) {
+    console.log(`Resources already seeded (${existing.length} found), skipping.`);
+    return;
+  }
+
+  const adminRows = await db.select().from(users).where(eq(users.email, "admin@rfc.com"));
+  if (adminRows.length === 0) {
+    console.log("Admin user not found, cannot seed resources.");
+    return;
+  }
+  const adminId = adminRows[0].id;
+
+  for (const resource of seedResources) {
+    await db.insert(resources).values({
+      ...resource,
+      createdBy: adminId,
+    });
+  }
+
+  console.log(`Seeded ${seedResources.length} resources.`);
+}

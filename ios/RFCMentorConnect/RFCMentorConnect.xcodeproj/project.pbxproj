@@ -23,6 +23,7 @@
 		AA000014 /* PatientDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100014 /* PatientDetailView.swift */; };
 		AA000015 /* PatientDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100015 /* PatientDashboardView.swift */; };
 		AA000016 /* MentorDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100016 /* MentorDashboardView.swift */; };
+		AA000030 /* MentorResourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100030 /* MentorResourcesView.swift */; };
 		AA000017 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100017 /* ChatView.swift */; };
 		AA000018 /* VoiceRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100018 /* VoiceRecorderView.swift */; };
 		AA000019 /* AttachmentPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100019 /* AttachmentPickerView.swift */; };
@@ -49,6 +50,7 @@
 		AA100014 /* PatientDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientDetailView.swift; sourceTree = "<group>"; };
 		AA100015 /* PatientDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientDashboardView.swift; sourceTree = "<group>"; };
 		AA100016 /* MentorDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MentorDashboardView.swift; sourceTree = "<group>"; };
+		AA100030 /* MentorResourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MentorResourcesView.swift; sourceTree = "<group>"; };
 		AA100017 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		AA100018 /* VoiceRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRecorderView.swift; sourceTree = "<group>"; };
 		AA100019 /* AttachmentPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentPickerView.swift; sourceTree = "<group>"; };
@@ -157,6 +159,7 @@
 			isa = PBXGroup;
 			children = (
 				AA100016 /* MentorDashboardView.swift */,
+				AA100030 /* MentorResourcesView.swift */,
 			);
 			path = Mentor;
 			sourceTree = "<group>";
@@ -288,6 +291,7 @@
 				AA000014 /* PatientDetailView.swift in Sources */,
 				AA000015 /* PatientDashboardView.swift in Sources */,
 				AA000016 /* MentorDashboardView.swift in Sources */,
+				AA000030 /* MentorResourcesView.swift in Sources */,
 				AA000017 /* ChatView.swift in Sources */,
 				AA000018 /* VoiceRecorderView.swift in Sources */,
 				AA000019 /* AttachmentPickerView.swift in Sources */,

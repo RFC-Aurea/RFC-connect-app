@@ -8,13 +8,13 @@ struct PatientDashboardView: View {
     @State private var navigateToChat = false
 
     private let phases = [
-        "Trying to Conceive", "Fertility Testing", "IUI Treatment",
-        "IVF Treatment", "Egg Freezing", "Donor/Surrogacy",
-        "Pregnancy After Infertility", "Parenting After Infertility"
+        "Pre-Consult & Decision", "Testing & Diagnosis", "Stimulation",
+        "Retrieval & Fertilization", "Transfer Prep", "Two Week Wait",
+        "Early Pregnancy", "Postpartum/Graduation"
     ]
 
     var phaseProgress: Double {
-        guard let phase = dashboard?.user.phase ?? auth.currentUser?.phase,
+        guard let phase = dashboard?.phase ?? dashboard?.user.phase ?? auth.currentUser?.phase,
               let idx = phases.firstIndex(of: phase) else { return 0 }
         return Double(idx + 1) / Double(phases.count)
     }
@@ -75,7 +75,7 @@ struct PatientDashboardView: View {
                     .foregroundColor(Color(hex: "B8860B"))
             }
 
-            if let phase = dashboard?.user.phase ?? auth.currentUser?.phase {
+            if let phase = dashboard?.phase ?? dashboard?.user.phase ?? auth.currentUser?.phase {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Current Phase")
                         .font(.caption.bold())
