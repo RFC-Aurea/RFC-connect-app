@@ -355,9 +355,12 @@ export async function registerRoutes(
 
   app.get("/api/admin/overview", requireRole("admin"), async (req, res, next) => {
     try {
-      const patients = await storage.getUsersByRole("patient");
-      const mentors = await storage.getUsersByRole("mentor");
-      const assignments = await storage.getAllAssignments();
+      const [patients, mentors, admins, assignments] = await Promise.all([
+        storage.getUsersByRole("patient"),
+        storage.getUsersByRole("mentor"),
+        storage.getUsersByRole("admin"),
+        storage.getAllAssignments(),
+      ]);
 
       const patientsWithPhase = await Promise.all(
         patients.map(async (p) => {
@@ -376,6 +379,7 @@ export async function registerRoutes(
       return res.json({
         patients: patientsWithPhase,
         mentors: mentors.map(({ password, ...m }) => m),
+        admins: admins.filter(a => a.id !== req.user!.id).map(({ password, ...a }) => a),
         assignments,
       });
     } catch (err) { next(err); }
@@ -539,8 +543,8 @@ export async function registerRoutes(
       if (!email || !name || !role) {
         return res.status(400).json({ message: "email, name, and role are required" });
       }
-      if (role !== "patient" && role !== "mentor") {
-        return res.status(400).json({ message: "role must be 'patient' or 'mentor'" });
+      if (role !== "patient" && role !== "mentor" && role !== "admin") {
+        return res.status(400).json({ message: "role must be 'patient', 'mentor', or 'admin'" });
       }
 
       const domainValid = await validateEmailDomain(email);
@@ -594,11 +598,8 @@ export async function registerRoutes(
         details: `Created ${role} account for ${email}`,
       });
 
-      try {
-        await sendWelcomeEmail({ to: email, name, role, username, tempPassword });
-      } catch (emailErr) {
-        console.error("[email] Failed to send welcome email:", emailErr);
-      }
+      sendWelcomeEmail({ to: email, name, role, username, tempPassword })
+        .catch(err => console.error("[email] Failed to send welcome email:", err));
 
       const { password: _, ...safeUser } = user;
       return res.status(201).json({ ...safeUser, tempPassword });
@@ -651,6 +652,20 @@ export async function registerRoutes(
       });
 
       return res.json({ message: "User deactivated" });
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/admin/users", requireRole("admin"), async (req, res, next) => {
+    try {
+      const [patients, mentors, admins] = await Promise.all([
+        storage.getUsersByRole("patient"),
+        storage.getUsersByRole("mentor"),
+        storage.getUsersByRole("admin"),
+      ]);
+      const allUsers = [...patients, ...mentors, ...admins]
+        .filter(u => u.id !== req.user!.id)
+        .map(({ password, ...safe }) => safe);
+      return res.json(allUsers);
     } catch (err) { next(err); }
   });
 

@@ -3,6 +3,7 @@ import Foundation
 struct AdminOverview: Codable {
     let patients: [PatientSummary]
     let mentors: [MentorSummary]
+    let admins: [AdminSummary]?
     let assignments: [MentorAssignment]
 }
 
@@ -14,9 +15,21 @@ struct PatientSummary: Codable, Identifiable {
     let mentorId: Int?
     let status: String
     let username: String?
+    let phoneVerified: Bool?
+    let mustChangePassword: Bool?
 }
 
 struct MentorSummary: Codable, Identifiable {
+    let id: Int
+    let name: String
+    let email: String
+    let status: String
+    let username: String?
+    let phoneVerified: Bool?
+    let mustChangePassword: Bool?
+}
+
+struct AdminSummary: Codable, Identifiable {
     let id: Int
     let name: String
     let email: String
@@ -32,15 +45,11 @@ struct MentorAssignment: Codable, Identifiable {
 }
 
 struct CreateUserResponse: Codable {
-    let user: CreatedUser
-    let username: String
-    let temporaryPassword: String
-}
-
-struct CreatedUser: Codable, Identifiable {
     let id: Int
     let name: String
     let email: String
-    let role: String
     let username: String
+    let role: String
+    let status: String
+    let tempPassword: String
 }

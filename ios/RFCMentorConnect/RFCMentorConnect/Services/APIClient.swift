@@ -147,7 +147,7 @@ final class APIClient {
     }
 
     func createUser(name: String, email: String, role: String) async throws -> CreateUserResponse {
-        let data = try await requestWithRetry("/api/admin/users", method: "POST", body: ["name": name, "email": email, "role": role])
+        let data = try await requestWithRetry("/api/admin/create-user", method: "POST", body: ["name": name, "email": email, "role": role])
         return try decode(CreateUserResponse.self, from: data)
     }
 
