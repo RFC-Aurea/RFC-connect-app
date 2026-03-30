@@ -14,6 +14,7 @@ import {
   sendVerificationCode,
   checkVerificationCode,
 } from "./twilio";
+import { validateEmailDomain, sendWelcomeEmail } from "./email";
 import {
   upload,
   uploadFile,
@@ -542,6 +543,11 @@ export async function registerRoutes(
         return res.status(400).json({ message: "role must be 'patient' or 'mentor'" });
       }
 
+      const domainValid = await validateEmailDomain(email);
+      if (!domainValid) {
+        return res.status(400).json({ message: "Invalid email domain. Please check the email address." });
+      }
+
       const existing = await storage.getUserByEmail(email);
       if (existing) return res.status(400).json({ message: "Email already exists" });
 
@@ -587,6 +593,12 @@ export async function registerRoutes(
         targetId: user.id,
         details: `Created ${role} account for ${email}`,
       });
+
+      try {
+        await sendWelcomeEmail({ to: email, name, role, username, tempPassword });
+      } catch (emailErr) {
+        console.error("[email] Failed to send welcome email:", emailErr);
+      }
 
       const { password: _, ...safeUser } = user;
       return res.status(201).json({ ...safeUser, tempPassword });
