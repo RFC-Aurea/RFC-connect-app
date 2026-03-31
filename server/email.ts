@@ -227,7 +227,7 @@ export async function sendWelcomeEmail(params: {
 
   const resend = new Resend(resendApiKey!);
   const { error } = await resend.emails.send({
-    from: "RFC Mentor Connect <onboarding@resend.dev>",
+    from: "RFC Mentor Connect <info@rejuvenatingfertility.com>",
     replyTo: "alifiyab@rfcfertility.com",
     to,
     subject,
