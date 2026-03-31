@@ -232,7 +232,7 @@ struct ChatView: View {
             do {
                 let msg = try await APIClient.shared.sendMessage(to: partnerId, content: text)
                 messages.append(msg)
-            } catch {}
+            } catch { print("Chat error: \(error)") }
             isSending = false
         }
     }
@@ -242,14 +242,14 @@ struct ChatView: View {
             let attachment = try await APIClient.shared.uploadFile(data: data, fileName: fileName, mimeType: mimeType)
             let msg = try await APIClient.shared.sendMessage(to: partnerId, content: attachment.fileUrl, messageType: type)
             messages.append(msg)
-        } catch {}
+        } catch { print("Chat error: \(error)") }
     }
 
     private func loadMessages() async {
         isLoading = true
         do {
             messages = try await APIClient.shared.getMessages(with: partnerId)
-        } catch {}
+        } catch { print("Chat error: \(error)") }
         isLoading = false
     }
 

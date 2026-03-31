@@ -189,7 +189,7 @@ final class APIClient {
     }
 
     func sendMessage(to userId: Int, content: String, messageType: String = "text") async throws -> Message {
-        let data = try await requestWithRetry("/api/messages", method: "POST", body: ["receiverId": userId, "content": content, "messageType": messageType])
+        let data = try await requestWithRetry("/api/messages/\(userId)", method: "POST", body: ["content": content, "messageType": messageType])
         return try decode(Message.self, from: data)
     }
 
