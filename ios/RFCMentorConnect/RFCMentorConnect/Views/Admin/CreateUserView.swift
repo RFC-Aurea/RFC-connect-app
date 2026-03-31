@@ -88,13 +88,13 @@ struct CreateUserView: View {
             .alert("Account Created", isPresented: $showSuccess, presenting: createdUser) { _ in
                 Button("Copy & Close") {
                     if let u = createdUser {
-                        UIPasteboard.general.string = "Username: \(u.username)\nPassword: \(u.tempPassword)"
+                        UIPasteboard.general.string = "Email: \(u.email)\nTemporary Password: \(u.tempPassword)"
                     }
                     dismiss()
                 }
                 Button("Close") { dismiss() }
             } message: { u in
-                Text("Username: \(u.username)\n\nTemporary Password:\n\(u.tempPassword)\n\nA welcome email has been sent. Please also share these credentials securely.")
+                Text("Email: \(u.email)\n\nTemporary Password:\n\(u.tempPassword)\n\nThey should sign in with their email address and this password. A welcome email has been sent.")
             }
         }
     }
