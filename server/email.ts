@@ -11,13 +11,15 @@ let transporter: nodemailer.Transporter | null = null;
 if (emailEnabled) {
   transporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
+    port: 587,
+    secure: false,
+    requireTLS: true,
+    family: 4,
     auth: {
       user: smtpUser!,
       pass: smtpAppPassword!,
     },
-  });
+  } as nodemailer.TransportOptions);
 } else {
   console.warn(
     "[email] SMTP_USER or SMTP_APP_PASSWORD not set — " +
