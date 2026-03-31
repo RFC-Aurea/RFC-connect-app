@@ -196,8 +196,8 @@ export async function registerRoutes(
   app.post("/api/auth/change-password", requireAuth, async (req, res, next) => {
     try {
       const { currentPassword, newPassword } = req.body;
-      if (!currentPassword || !newPassword) {
-        res.status(400).json({ message: "currentPassword and newPassword are required" });
+      if (!newPassword) {
+        res.status(400).json({ message: "newPassword is required" });
         return;
       }
       if (newPassword.length < 8) {
@@ -211,10 +211,18 @@ export async function registerRoutes(
         return;
       }
 
-      const valid = await comparePasswords(currentPassword, user.password);
-      if (!valid) {
-        res.status(401).json({ message: "Current password is incorrect" });
-        return;
+      // Onboarding users with mustChangePassword=true don't have their temp password
+      // available on the client, so we skip currentPassword validation for them.
+      if (!user.mustChangePassword) {
+        if (!currentPassword) {
+          res.status(400).json({ message: "currentPassword is required" });
+          return;
+        }
+        const valid = await comparePasswords(currentPassword, user.password);
+        if (!valid) {
+          res.status(401).json({ message: "Current password is incorrect" });
+          return;
+        }
       }
 
       const hashed = await hashPassword(newPassword);

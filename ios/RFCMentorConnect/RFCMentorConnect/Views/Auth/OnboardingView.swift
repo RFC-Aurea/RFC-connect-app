@@ -182,7 +182,7 @@ struct OnboardingView: View {
         showError = false
         Task {
             do {
-                try await APIClient.shared.verifyPhone(code: code)
+                try await APIClient.shared.verifyPhone(phone: phone, code: code)
                 step = 3
             } catch {
                 errorMessage = error.localizedDescription

@@ -126,8 +126,8 @@ final class APIClient {
         _ = try await requestWithRetry("/api/auth/send-verification", method: "POST", body: ["phone": phone])
     }
 
-    func verifyPhone(code: String) async throws {
-        _ = try await requestWithRetry("/api/auth/verify-phone", method: "POST", body: ["code": code])
+    func verifyPhone(phone: String, code: String) async throws {
+        _ = try await requestWithRetry("/api/auth/verify-phone", method: "POST", body: ["phone": phone, "code": code])
     }
 
     func changePassword(currentPassword: String, newPassword: String) async throws {
@@ -152,7 +152,7 @@ final class APIClient {
     }
 
     func assignMentor(patientId: Int, mentorId: Int) async throws {
-        _ = try await requestWithRetry("/api/admin/assign-mentor", method: "POST", body: ["patientId": patientId, "mentorId": mentorId])
+        _ = try await requestWithRetry("/api/mentor-assignments", method: "POST", body: ["patientId": patientId, "mentorId": mentorId])
     }
 
     func updatePhase(patientId: Int, phase: String) async throws {
