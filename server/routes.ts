@@ -141,6 +141,18 @@ export async function registerRoutes(
     } catch (err) { next(err); }
   });
 
+  app.get("/api/auth/me", requireAuth, async (req, res, next) => {
+    try {
+      const user = await storage.getUser(req.user!.id);
+      if (!user) {
+        res.status(404).json({ message: "User not found" });
+        return;
+      }
+      const { password: _, ...safeUser } = user;
+      res.json(safeUser);
+    } catch (err) { next(err); }
+  });
+
   // E.164 phone: starts with +, followed by 10–15 digits
   const PHONE_RE = /^\+\d{10,15}$/;
 
