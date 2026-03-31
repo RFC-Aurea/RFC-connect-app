@@ -70,7 +70,7 @@ struct ChatView: View {
         .task { await loadMessages() }
         .sheet(isPresented: $showPhotoPicker) {
             AttachmentPickerView { data, name, mime in
-                Task { await uploadAndSend(data: data, fileName: name, mimeType: mime, type: "image") }
+                Task { await uploadAndSend(data: data, fileName: name, mimeType: mime, type: "photo") }
             }
         }
         .sheet(isPresented: $showDocumentPicker) {
@@ -82,7 +82,7 @@ struct ChatView: View {
             VoiceRecorderView { url in
                 Task {
                     guard let data = try? Data(contentsOf: url) else { return }
-                    await uploadAndSend(data: data, fileName: url.lastPathComponent, mimeType: "audio/mp4", type: "audio")
+                    await uploadAndSend(data: data, fileName: url.lastPathComponent, mimeType: "audio/mp4", type: "voice")
                 }
             }
         }
@@ -239,7 +239,7 @@ struct ChatView: View {
 
     private func uploadAndSend(data: Data, fileName: String, mimeType: String, type: String) async {
         do {
-            let attachment = try await APIClient.shared.uploadFile(data: data, fileName: fileName, mimeType: mimeType)
+            let attachment = try await APIClient.shared.uploadFile(data: data, fileName: fileName, mimeType: mimeType, type: type)
             let msg = try await APIClient.shared.sendMessage(to: partnerId, content: attachment.fileUrl, messageType: type)
             messages.append(msg)
         } catch { print("Chat error: \(error)") }

@@ -208,7 +208,7 @@ final class APIClient {
 
     // MARK: - File Upload
 
-    func uploadFile(data fileData: Data, fileName: String, mimeType: String) async throws -> ChatAttachment {
+    func uploadFile(data fileData: Data, fileName: String, mimeType: String, type: String) async throws -> ChatAttachment {
         guard let url = URL(string: baseURL + "/api/upload") else { throw APIError.invalidURL }
         let boundary = UUID().uuidString
         var req = URLRequest(url: url)
@@ -218,6 +218,9 @@ final class APIClient {
             req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
         var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"type\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(type)\r\n".data(using: .utf8)!)
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
         body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
