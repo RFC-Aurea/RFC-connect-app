@@ -96,11 +96,17 @@ final class APIClient {
         let refreshToken: String?
         let user: User?
         let requiresVerification: Bool?
+        let userId: Int?
         let message: String?
     }
 
     func login(email: String, password: String) async throws -> LoginResponse {
         let data = try await requestWithRetry("/api/auth/login", method: "POST", body: ["email": email, "password": password])
+        return try decode(LoginResponse.self, from: data)
+    }
+
+    func completeLogin(userId: Int, code: String) async throws -> LoginResponse {
+        let data = try await requestWithRetry("/api/auth/complete-login", method: "POST", body: ["userId": userId, "verificationCode": code])
         return try decode(LoginResponse.self, from: data)
     }
 

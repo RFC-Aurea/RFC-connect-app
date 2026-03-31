@@ -47,6 +47,18 @@ final class AuthService: ObservableObject {
         return response
     }
 
+    func completeLogin(userId: Int, code: String) async throws -> APIClient.LoginResponse {
+        let response = try await APIClient.shared.completeLogin(userId: userId, code: code)
+        if let access = response.accessToken, let refresh = response.refreshToken {
+            KeychainHelper.shared.save(access, for: "accessToken")
+            KeychainHelper.shared.save(refresh, for: "refreshToken")
+            currentUser = response.user
+            isAuthenticated = true
+            requiresOnboarding = response.user?.mustChangePassword ?? false
+        }
+        return response
+    }
+
     func logout() {
         clearTokens()
         currentUser = nil
