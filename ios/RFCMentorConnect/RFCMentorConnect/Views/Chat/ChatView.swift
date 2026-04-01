@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 struct ChatView: View {
     @EnvironmentObject var auth: AuthService
@@ -19,6 +20,8 @@ struct ChatView: View {
     @State private var showReportAlert = false
     @State private var scrollProxy: ScrollViewProxy?
     @State private var typingDebounce: Task<Void, Never>?
+    @State private var fullscreenImageURL: String?
+    @StateObject private var voicePlayerManager = VoicePlayerManager()
 
     var body: some View {
         VStack(spacing: 0) {
@@ -102,6 +105,13 @@ struct ChatView: View {
         } message: {
             Text("This message will be reviewed by the RFC team.")
         }
+        .overlay {
+            if let urlString = fullscreenImageURL, let url = URL(string: urlString) {
+                FullscreenImageView(url: url) {
+                    fullscreenImageURL = nil
+                }
+            }
+        }
     }
 
     private var disclaimerBanner: some View {
@@ -123,11 +133,26 @@ struct ChatView: View {
         return HStack {
             if isMe { Spacer(minLength: 60) }
             VStack(alignment: isMe ? .trailing : .leading, spacing: 4) {
-                if message.messageType == "voice" {
-                    voiceBubble(message: message, isMe: isMe)
-                } else if message.messageType == "image" {
-                    imageBubble(message: message, isMe: isMe)
-                } else {
+                switch message.messageType {
+                case "photo", "image":
+                    PhotoBubble(urlString: message.attachment?.fileUrl ?? message.content, isMe: isMe) {
+                        fullscreenImageURL = message.attachment?.fileUrl ?? message.content
+                    }
+                case "voice":
+                    VoiceBubble(
+                        urlString: message.attachment?.fileUrl ?? message.content,
+                        durationSeconds: message.attachment?.durationSeconds,
+                        isMe: isMe,
+                        playerManager: voicePlayerManager,
+                        messageId: message.id
+                    )
+                case "document":
+                    DocumentBubble(
+                        urlString: message.attachment?.fileUrl ?? message.content,
+                        fileName: message.attachment?.fileName,
+                        isMe: isMe
+                    )
+                default:
                     Text(message.content)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
@@ -142,32 +167,6 @@ struct ChatView: View {
             }
             if !isMe { Spacer(minLength: 60) }
         }
-    }
-
-    private func voiceBubble(message: Message, isMe: Bool) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "waveform")
-                .foregroundColor(isMe ? .white : Color(hex: "1B4332"))
-            if let dur = message.attachment?.durationSeconds {
-                Text("\(dur)s")
-                    .font(.caption)
-                    .foregroundColor(isMe ? .white.opacity(0.8) : .secondary)
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(isMe ? Color(hex: "1B4332") : Color.white)
-        .cornerRadius(18)
-    }
-
-    private func imageBubble(message: Message, isMe: Bool) -> some View {
-        AsyncImage(url: URL(string: message.attachment?.fileUrl ?? "")) { img in
-            img.resizable().scaledToFill()
-        } placeholder: {
-            ProgressView()
-        }
-        .frame(width: 200, height: 150)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     private var typingIndicator: some View {
@@ -266,5 +265,195 @@ struct ChatView: View {
             }
         }
         return ""
+    }
+}
+
+// MARK: - Photo Bubble
+
+private struct PhotoBubble: View {
+    let urlString: String
+    let isMe: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        AsyncImage(url: URL(string: urlString)) { phase in
+            switch phase {
+            case .success(let image):
+                image
+                    .resizable()
+                    .scaledToFill()
+            case .failure:
+                Image(systemName: "photo")
+                    .foregroundColor(.secondary)
+                    .frame(width: 200, height: 150)
+            default:
+                ProgressView()
+                    .frame(width: 200, height: 150)
+            }
+        }
+        .frame(maxWidth: 200, maxHeight: 200)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .onTapGesture(perform: onTap)
+    }
+}
+
+// MARK: - Voice Bubble
+
+private struct VoiceBubble: View {
+    let urlString: String
+    let durationSeconds: Int?
+    let isMe: Bool
+    let playerManager: VoicePlayerManager
+    let messageId: Int
+
+    private var isPlaying: Bool {
+        playerManager.playingMessageId == messageId
+    }
+
+    var body: some View {
+        Button {
+            if isPlaying {
+                playerManager.pause()
+            } else {
+                playerManager.play(urlString: urlString, messageId: messageId)
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                    .foregroundColor(isMe ? .white : Color(hex: "1B4332"))
+                Text("Voice Message")
+                    .font(.subheadline)
+                    .foregroundColor(isMe ? .white : .primary)
+                if let dur = durationSeconds {
+                    Text("\(dur)s")
+                        .font(.caption)
+                        .foregroundColor(isMe ? .white.opacity(0.7) : .secondary)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(isMe ? Color(hex: "1B4332") : Color.white)
+            .cornerRadius(18)
+        }
+    }
+}
+
+// MARK: - Document Bubble
+
+private struct DocumentBubble: View {
+    let urlString: String
+    let fileName: String?
+    let isMe: Bool
+
+    private var displayName: String {
+        if let name = fileName, !name.isEmpty { return name }
+        return URL(string: urlString)?.lastPathComponent ?? "Document"
+    }
+
+    var body: some View {
+        Button {
+            if let url = URL(string: urlString) {
+                UIApplication.shared.open(url)
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "doc.fill")
+                    .foregroundColor(isMe ? .white : Color(hex: "1B4332"))
+                Text(displayName)
+                    .font(.subheadline)
+                    .foregroundColor(isMe ? .white : .primary)
+                    .lineLimit(2)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(isMe ? Color(hex: "1B4332") : Color.white)
+            .cornerRadius(18)
+        }
+    }
+}
+
+// MARK: - Fullscreen Image
+
+private struct FullscreenImageView: View {
+    let url: URL
+    let onDismiss: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+                .onTapGesture(perform: onDismiss)
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFit()
+                default:
+                    ProgressView().tint(.white)
+                }
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            Button(action: onDismiss) {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.title)
+                    .foregroundColor(.white)
+                    .padding()
+            }
+        }
+    }
+}
+
+// MARK: - Voice Player Manager
+
+class VoicePlayerManager: ObservableObject {
+    @Published var playingMessageId: Int?
+    private var player: AVPlayer?
+    private var endObserver: Any?
+
+    func play(urlString: String, messageId: Int) {
+        guard let url = URL(string: urlString) else { return }
+
+        // Stop current playback if different message
+        if playingMessageId != messageId {
+            cleanup()
+        }
+
+        let item = AVPlayerItem(url: url)
+        player = AVPlayer(playerItem: item)
+
+        // Configure audio session for playback
+        try? AVAudioSession.sharedInstance().setCategory(.playback)
+        try? AVAudioSession.sharedInstance().setActive(true)
+
+        endObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: item,
+            queue: .main
+        ) { [weak self] _ in
+            self?.playingMessageId = nil
+        }
+
+        player?.play()
+        playingMessageId = messageId
+    }
+
+    func pause() {
+        player?.pause()
+        playingMessageId = nil
+    }
+
+    private func cleanup() {
+        player?.pause()
+        if let obs = endObserver {
+            NotificationCenter.default.removeObserver(obs)
+            endObserver = nil
+        }
+        player = nil
+        playingMessageId = nil
+    }
+
+    deinit {
+        cleanup()
     }
 }
