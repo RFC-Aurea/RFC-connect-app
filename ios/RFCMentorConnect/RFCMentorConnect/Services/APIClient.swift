@@ -194,8 +194,10 @@ final class APIClient {
         return try decode([Message].self, from: data)
     }
 
-    func sendMessage(to userId: Int, content: String, messageType: String = "text") async throws -> Message {
-        let data = try await requestWithRetry("/api/messages/\(userId)", method: "POST", body: ["content": content, "messageType": messageType])
+    func sendMessage(to userId: Int, content: String, messageType: String = "text", attachmentId: Int? = nil) async throws -> Message {
+        var body: [String: Any] = ["content": content, "messageType": messageType]
+        if let attachmentId { body["attachmentId"] = attachmentId }
+        let data = try await requestWithRetry("/api/messages/\(userId)", method: "POST", body: body)
         return try decode(Message.self, from: data)
     }
 
@@ -210,6 +212,38 @@ final class APIClient {
         if let phase = phase { path += "?phase=\(phase)" }
         let data = try await requestWithRetry(path)
         return try decode([Resource].self, from: data)
+    }
+
+    // MARK: - Authenticated File Access
+
+    /// Returns the full URL for a relative API path (e.g. /api/files/5).
+    func authenticatedURL(for path: String) -> URL? {
+        URL(string: baseURL + path)
+    }
+
+    /// Downloads file data from a relative API path with auth token.
+    func downloadFileData(from path: String) async throws -> Data {
+        guard let url = URL(string: baseURL + path) else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        if let token = KeychainHelper.shared.read(for: "accessToken") {
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse else { throw APIError.noData }
+        if http.statusCode == 401 {
+            if try await refreshToken() {
+                var retryReq = URLRequest(url: url)
+                if let token = KeychainHelper.shared.read(for: "accessToken") {
+                    retryReq.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                }
+                let (retryData, retryResponse) = try await session.data(for: retryReq)
+                guard let retryHttp = retryResponse as? HTTPURLResponse else { throw APIError.noData }
+                if retryHttp.statusCode == 401 { throw APIError.unauthorized }
+                return try validate(retryData, statusCode: retryHttp.statusCode)
+            }
+            throw APIError.unauthorized
+        }
+        return try validate(data, statusCode: http.statusCode)
     }
 
     // MARK: - File Upload

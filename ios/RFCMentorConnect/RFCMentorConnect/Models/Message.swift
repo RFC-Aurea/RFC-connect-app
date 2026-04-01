@@ -14,8 +14,8 @@ struct Message: Codable, Identifiable, Equatable {
 struct ChatAttachment: Codable, Identifiable, Equatable {
     let id: Int
     let type: String
-    let fileUrl: String
-    let fileName: String
+    let url: String
+    let fileName: String?
     let fileSize: Int?
     let durationSeconds: Int?
 }

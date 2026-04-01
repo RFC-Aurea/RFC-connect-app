@@ -18,6 +18,7 @@ import { validateEmailDomain, sendWelcomeEmail } from "./email";
 import {
   upload,
   uploadFile,
+  getFileStream,
   storageEnabled,
   ALLOWED_MIMES,
   maxSizeForType,
@@ -303,12 +304,48 @@ export async function registerRoutes(
 
         res.status(201).json({
           attachmentId: attachment.id,
-          url: attachment.fileUrl,
+          url: `/api/files/${attachment.id}`,
           type: attachment.type,
         });
       } catch (err) { next(err); }
     },
   );
+
+  // Proxy endpoint: serve attachment files through the authenticated API
+  app.get("/api/files/:attachmentId", requireAuth, async (req, res, next) => {
+    try {
+      const attachmentId = parseInt(req.params.attachmentId as string);
+      if (isNaN(attachmentId)) {
+        res.status(400).json({ message: "Invalid attachment ID" });
+        return;
+      }
+
+      const attachment = await storage.getChatAttachment(attachmentId);
+      if (!attachment) {
+        res.status(404).json({ message: "Attachment not found" });
+        return;
+      }
+
+      // Verify the requesting user is sender/receiver of the linked message, or is admin
+      if (req.user!.role !== "admin" && attachment.messageId) {
+        const msg = await storage.getMessage(attachment.messageId);
+        if (msg && msg.senderId !== req.user!.id && msg.receiverId !== req.user!.id) {
+          res.status(403).json({ message: "Access denied" });
+          return;
+        }
+      }
+
+      const result = await getFileStream(attachment.fileUrl);
+      if (!result) {
+        res.status(404).json({ message: "File not found in storage" });
+        return;
+      }
+
+      res.setHeader("Content-Type", result.contentType);
+      res.setHeader("Cache-Control", "private, max-age=3600");
+      result.stream.pipe(res);
+    } catch (err) { next(err); }
+  });
 
   app.get("/api/users/:id", requireAuth, async (req, res, next) => {
     try {
@@ -468,7 +505,7 @@ export async function registerRoutes(
           return {
             ...msg,
             attachment: a
-              ? { url: a.fileUrl, fileName: a.fileName, type: a.type, durationSeconds: a.durationSeconds }
+              ? { id: a.id, url: `/api/files/${a.id}`, fileName: a.fileName, type: a.type, durationSeconds: a.durationSeconds }
               : null,
           };
         }),

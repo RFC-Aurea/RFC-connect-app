@@ -31,6 +31,7 @@ export interface IStorage {
   getPatientPhase(patientId: number): Promise<PatientPhase | undefined>;
   upsertPatientPhase(phase: InsertPatientPhase): Promise<PatientPhase>;
 
+  getMessage(id: number): Promise<Message | undefined>;
   getMessages(userId1: number, userId2: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
 
@@ -56,6 +57,7 @@ export interface IStorage {
   markNotificationRead(id: number): Promise<void>;
 
   createChatAttachment(attachment: InsertChatAttachment): Promise<ChatAttachment>;
+  getChatAttachment(id: number): Promise<ChatAttachment | undefined>;
   getChatAttachmentsByMessage(messageId: number): Promise<ChatAttachment[]>;
   linkAttachmentToMessage(attachmentId: number, messageId: number): Promise<void>;
 }
@@ -122,6 +124,11 @@ export class DatabaseStorage implements IStorage {
     }
     const [created] = await db.insert(patientPhases).values(phase).returning();
     return created;
+  }
+
+  async getMessage(id: number): Promise<Message | undefined> {
+    const [msg] = await db.select().from(messages).where(eq(messages.id, id));
+    return msg;
   }
 
   async getMessages(userId1: number, userId2: number): Promise<Message[]> {
@@ -219,6 +226,11 @@ export class DatabaseStorage implements IStorage {
   async createChatAttachment(attachment: InsertChatAttachment): Promise<ChatAttachment> {
     const [created] = await db.insert(chatAttachments).values(attachment).returning();
     return created;
+  }
+
+  async getChatAttachment(id: number): Promise<ChatAttachment | undefined> {
+    const [att] = await db.select().from(chatAttachments).where(eq(chatAttachments.id, id));
+    return att;
   }
 
   async getChatAttachmentsByMessage(messageId: number): Promise<ChatAttachment[]> {

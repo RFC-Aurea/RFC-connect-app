@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import type { Readable } from "stream";
 import multer from "multer";
 import { randomUUID } from "crypto";
 import path from "path";
@@ -129,4 +130,43 @@ export async function uploadFile(
 /** Per-type max size in bytes — used by the route handler for validation. */
 export function maxSizeForType(type: AttachmentType): number {
   return SIZE_LIMITS[type];
+}
+
+/**
+ * Retrieve a file from R2 or local disk given its stored fileUrl.
+ * Returns { stream, contentType } or null if not found.
+ */
+export async function getFileStream(
+  fileUrl: string,
+): Promise<{ stream: Readable | fs.ReadStream; contentType: string } | null> {
+  if (storageEnabled && s3) {
+    // fileUrl looks like https://{bucket}.{account}.r2.cloudflarestorage.com/{key}
+    const prefix = `https://${r2BucketName}.${r2AccountId}.r2.cloudflarestorage.com/`;
+    if (!fileUrl.startsWith(prefix)) return null;
+    const key = fileUrl.slice(prefix.length);
+    const resp = await s3.send(
+      new GetObjectCommand({ Bucket: r2BucketName!, Key: key }),
+    );
+    if (!resp.Body) return null;
+    return {
+      stream: resp.Body as Readable,
+      contentType: resp.ContentType || "application/octet-stream",
+    };
+  }
+
+  // Local fallback: fileUrl looks like /uploads/{key}
+  const localPath = path.resolve(process.cwd(), fileUrl.replace(/^\//, ""));
+  if (!fs.existsSync(localPath)) return null;
+  const ext = path.extname(localPath).toLowerCase();
+  const mimeMap: Record<string, string> = {
+    ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png",
+    ".heic": "image/heic", ".heif": "image/heif",
+    ".pdf": "application/pdf", ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".mp4": "audio/mp4", ".m4a": "audio/m4a", ".mp3": "audio/mpeg",
+  };
+  return {
+    stream: fs.createReadStream(localPath),
+    contentType: mimeMap[ext] || "application/octet-stream",
+  };
 }

@@ -106,8 +106,8 @@ struct ChatView: View {
             Text("This message will be reviewed by the RFC team.")
         }
         .overlay {
-            if let urlString = fullscreenImageURL, let url = URL(string: urlString) {
-                FullscreenImageView(url: url) {
+            if let filePath = fullscreenImageURL {
+                FullscreenImageView(filePath: filePath) {
                     fullscreenImageURL = nil
                 }
             }
@@ -135,20 +135,23 @@ struct ChatView: View {
             VStack(alignment: isMe ? .trailing : .leading, spacing: 4) {
                 switch message.messageType {
                 case "photo", "image":
-                    PhotoBubble(urlString: message.attachment?.fileUrl ?? message.content, isMe: isMe) {
-                        fullscreenImageURL = message.attachment?.fileUrl ?? message.content
+                    let photoPath = message.attachment?.url ?? message.content
+                    PhotoBubble(filePath: photoPath, isMe: isMe) {
+                        fullscreenImageURL = photoPath
                     }
                 case "voice":
+                    let voicePath = message.attachment?.url ?? message.content
                     VoiceBubble(
-                        urlString: message.attachment?.fileUrl ?? message.content,
+                        filePath: voicePath,
                         durationSeconds: message.attachment?.durationSeconds,
                         isMe: isMe,
                         playerManager: voicePlayerManager,
                         messageId: message.id
                     )
                 case "document":
+                    let docPath = message.attachment?.url ?? message.content
                     DocumentBubble(
-                        urlString: message.attachment?.fileUrl ?? message.content,
+                        filePath: docPath,
                         fileName: message.attachment?.fileName,
                         isMe: isMe
                     )
@@ -239,7 +242,7 @@ struct ChatView: View {
     private func uploadAndSend(data: Data, fileName: String, mimeType: String, type: String) async {
         do {
             let attachment = try await APIClient.shared.uploadFile(data: data, fileName: fileName, mimeType: mimeType, type: type)
-            let msg = try await APIClient.shared.sendMessage(to: partnerId, content: attachment.url, messageType: type)
+            let msg = try await APIClient.shared.sendMessage(to: partnerId, content: attachment.url, messageType: type, attachmentId: attachment.attachmentId)
             messages.append(msg)
         } catch {
             print("Upload/send error: \(error)")
@@ -271,22 +274,25 @@ struct ChatView: View {
 // MARK: - Photo Bubble
 
 private struct PhotoBubble: View {
-    let urlString: String
+    let filePath: String
     let isMe: Bool
     let onTap: () -> Void
 
+    @State private var image: UIImage?
+    @State private var isLoading = true
+    @State private var failed = false
+
     var body: some View {
-        AsyncImage(url: URL(string: urlString)) { phase in
-            switch phase {
-            case .success(let image):
-                image
+        Group {
+            if let image {
+                Image(uiImage: image)
                     .resizable()
                     .scaledToFill()
-            case .failure:
+            } else if failed {
                 Image(systemName: "photo")
                     .foregroundColor(.secondary)
                     .frame(width: 200, height: 150)
-            default:
+            } else {
                 ProgressView()
                     .frame(width: 200, height: 150)
             }
@@ -294,13 +300,22 @@ private struct PhotoBubble: View {
         .frame(maxWidth: 200, maxHeight: 200)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .onTapGesture(perform: onTap)
+        .task {
+            do {
+                let data = try await APIClient.shared.downloadFileData(from: filePath)
+                image = UIImage(data: data)
+                if image == nil { failed = true }
+            } catch {
+                failed = true
+            }
+        }
     }
 }
 
 // MARK: - Voice Bubble
 
 private struct VoiceBubble: View {
-    let urlString: String
+    let filePath: String
     let durationSeconds: Int?
     let isMe: Bool
     let playerManager: VoicePlayerManager
@@ -315,7 +330,7 @@ private struct VoiceBubble: View {
             if isPlaying {
                 playerManager.pause()
             } else {
-                playerManager.play(urlString: urlString, messageId: messageId)
+                playerManager.play(filePath: filePath, messageId: messageId)
             }
         } label: {
             HStack(spacing: 10) {
@@ -341,24 +356,34 @@ private struct VoiceBubble: View {
 // MARK: - Document Bubble
 
 private struct DocumentBubble: View {
-    let urlString: String
+    let filePath: String
     let fileName: String?
     let isMe: Bool
 
+    @State private var isDownloading = false
+    @State private var localURL: URL?
+
     private var displayName: String {
         if let name = fileName, !name.isEmpty { return name }
-        return URL(string: urlString)?.lastPathComponent ?? "Document"
+        return "Document"
     }
 
     var body: some View {
         Button {
-            if let url = URL(string: urlString) {
-                UIApplication.shared.open(url)
+            if let localURL {
+                UIApplication.shared.open(localURL)
+            } else {
+                downloadAndOpen()
             }
         } label: {
             HStack(spacing: 10) {
-                Image(systemName: "doc.fill")
-                    .foregroundColor(isMe ? .white : Color(hex: "1B4332"))
+                if isDownloading {
+                    ProgressView()
+                        .tint(isMe ? .white : Color(hex: "1B4332"))
+                } else {
+                    Image(systemName: "doc.fill")
+                        .foregroundColor(isMe ? .white : Color(hex: "1B4332"))
+                }
                 Text(displayName)
                     .font(.subheadline)
                     .foregroundColor(isMe ? .white : .primary)
@@ -369,28 +394,49 @@ private struct DocumentBubble: View {
             .background(isMe ? Color(hex: "1B4332") : Color.white)
             .cornerRadius(18)
         }
+        .disabled(isDownloading)
+    }
+
+    private func downloadAndOpen() {
+        isDownloading = true
+        Task {
+            do {
+                let data = try await APIClient.shared.downloadFileData(from: filePath)
+                let tempDir = FileManager.default.temporaryDirectory
+                let name = fileName ?? "document"
+                let fileURL = tempDir.appendingPathComponent(name)
+                try data.write(to: fileURL)
+                await MainActor.run {
+                    localURL = fileURL
+                    UIApplication.shared.open(fileURL)
+                    isDownloading = false
+                }
+            } catch {
+                await MainActor.run { isDownloading = false }
+                print("Document download error: \(error)")
+            }
+        }
     }
 }
 
 // MARK: - Fullscreen Image
 
 private struct FullscreenImageView: View {
-    let url: URL
+    let filePath: String
     let onDismiss: () -> Void
+
+    @State private var image: UIImage?
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
                 .onTapGesture(perform: onDismiss)
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFit()
-                default:
-                    ProgressView().tint(.white)
-                }
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+            } else {
+                ProgressView().tint(.white)
             }
         }
         .overlay(alignment: .topTrailing) {
@@ -401,6 +447,11 @@ private struct FullscreenImageView: View {
                     .padding()
             }
         }
+        .task {
+            if let data = try? await APIClient.shared.downloadFileData(from: filePath) {
+                image = UIImage(data: data)
+            }
+        }
     }
 }
 
@@ -408,21 +459,45 @@ private struct FullscreenImageView: View {
 
 class VoicePlayerManager: ObservableObject {
     @Published var playingMessageId: Int?
+    @Published var isDownloading = false
     private var player: AVPlayer?
     private var endObserver: Any?
+    private var cachedFiles: [String: URL] = [:]
 
-    func play(urlString: String, messageId: Int) {
-        guard let url = URL(string: urlString) else { return }
-
+    func play(filePath: String, messageId: Int) {
         // Stop current playback if different message
         if playingMessageId != messageId {
             cleanup()
         }
 
+        // If already cached, play immediately
+        if let localURL = cachedFiles[filePath] {
+            playLocal(url: localURL, messageId: messageId)
+            return
+        }
+
+        // Download the file first
+        isDownloading = true
+        Task { @MainActor in
+            do {
+                let data = try await APIClient.shared.downloadFileData(from: filePath)
+                let tempURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent("voice_\(messageId).m4a")
+                try data.write(to: tempURL)
+                cachedFiles[filePath] = tempURL
+                isDownloading = false
+                playLocal(url: tempURL, messageId: messageId)
+            } catch {
+                isDownloading = false
+                print("Voice download error: \(error)")
+            }
+        }
+    }
+
+    private func playLocal(url: URL, messageId: Int) {
         let item = AVPlayerItem(url: url)
         player = AVPlayer(playerItem: item)
 
-        // Configure audio session for playback
         try? AVAudioSession.sharedInstance().setCategory(.playback)
         try? AVAudioSession.sharedInstance().setActive(true)
 
