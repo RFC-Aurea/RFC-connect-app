@@ -214,7 +214,13 @@ final class APIClient {
 
     // MARK: - File Upload
 
-    func uploadFile(data fileData: Data, fileName: String, mimeType: String, type: String) async throws -> ChatAttachment {
+    struct UploadResponse: Codable {
+        let attachmentId: Int
+        let url: String
+        let type: String
+    }
+
+    func uploadFile(data fileData: Data, fileName: String, mimeType: String, type: String) async throws -> UploadResponse {
         guard let url = URL(string: baseURL + "/api/upload") else { throw APIError.invalidURL }
         let boundary = UUID().uuidString
         var req = URLRequest(url: url)
@@ -237,6 +243,6 @@ final class APIClient {
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw APIError.serverError(0, "Upload failed")
         }
-        return try decode(ChatAttachment.self, from: respData)
+        return try decode(UploadResponse.self, from: respData)
     }
 }

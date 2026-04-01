@@ -240,9 +240,11 @@ struct ChatView: View {
     private func uploadAndSend(data: Data, fileName: String, mimeType: String, type: String) async {
         do {
             let attachment = try await APIClient.shared.uploadFile(data: data, fileName: fileName, mimeType: mimeType, type: type)
-            let msg = try await APIClient.shared.sendMessage(to: partnerId, content: attachment.fileUrl, messageType: type)
+            let msg = try await APIClient.shared.sendMessage(to: partnerId, content: attachment.url, messageType: type)
             messages.append(msg)
-        } catch { print("Chat error: \(error)") }
+        } catch {
+            print("Upload/send error: \(error)")
+        }
     }
 
     private func loadMessages() async {
