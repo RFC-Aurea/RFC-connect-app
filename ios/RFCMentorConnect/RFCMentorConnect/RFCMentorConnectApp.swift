@@ -47,16 +47,11 @@ struct ContentView: View {
         ZStack {
             Color(hex: "1B4332").ignoresSafeArea()
             VStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.15))
-                        .frame(width: 100, height: 100)
-                    Image(systemName: "heart.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 50, height: 50)
-                        .foregroundColor(Color(hex: "B8860B"))
-                }
+                Image("RFCLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 100, height: 100)
+                    .clipShape(RoundedRectangle(cornerRadius: 22))
                 Text("RFC Mentor Connect")
                     .font(.title.bold())
                     .foregroundColor(.white)

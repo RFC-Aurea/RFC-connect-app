@@ -32,7 +32,7 @@ struct LoginView: View {
 
                 // Logo / Branding
                 VStack(spacing: 12) {
-                    Image("AppIcon")
+                    Image("RFCLogo")
                         .resizable()
                         .scaledToFit()
                         .frame(width: 100, height: 100)
