@@ -57,11 +57,13 @@ struct SettingsView: View {
 
                     // Legal
                     Section("Legal") {
-                        NavigationLink(destination: WebContentView(title: "Privacy Policy", urlString: "https://rfcfertility.com/privacy")) {
+                        Link(destination: URL(string: "https://www.rejuvenatingfertility.com/privacy-policy")!) {
                             Label("Privacy Policy", systemImage: "hand.raised.fill")
+                                .foregroundColor(.primary)
                         }
-                        NavigationLink(destination: WebContentView(title: "Terms of Service", urlString: "https://rfcfertility.com/terms")) {
+                        Link(destination: URL(string: "https://www.rejuvenatingfertility.com/terms-of-service")!) {
                             Label("Terms of Service", systemImage: "doc.text.fill")
+                                .foregroundColor(.primary)
                         }
                     }
 

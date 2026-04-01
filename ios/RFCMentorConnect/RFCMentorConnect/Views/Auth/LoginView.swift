@@ -1,5 +1,8 @@
 import SwiftUI
 
+private let privacyURL = URL(string: "https://www.rejuvenatingfertility.com/privacy-policy")!
+private let termsURL = URL(string: "https://www.rejuvenatingfertility.com/terms-of-service")!
+
 struct LoginView: View {
     @EnvironmentObject var auth: AuthService
     @State private var email = ""
@@ -29,22 +32,17 @@ struct LoginView: View {
 
                 // Logo / Branding
                 VStack(spacing: 12) {
-                    ZStack {
-                        Circle()
-                            .fill(Color(hex: "1B4332"))
-                            .frame(width: 88, height: 88)
-                        Image(systemName: "heart.fill")
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 40, height: 40)
-                            .foregroundColor(Color(hex: "B8860B"))
-                    }
+                    Image("AppIcon")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 100, height: 100)
+                        .clipShape(RoundedRectangle(cornerRadius: 22))
                     Text("RFC Mentor Connect")
                         .font(.title.bold())
                         .foregroundColor(Color(hex: "1B4332"))
-                    Text("Fertility Hope Connect")
+                    Text("Rejuvenating Fertility Center")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(hex: "B8860B"))
                 }
 
                 // Form
@@ -94,6 +92,49 @@ struct LoginView: View {
                     .opacity((email.isEmpty || password.isEmpty) ? 0.6 : 1)
                 }
                 .padding(.horizontal, 24)
+
+                // Feature highlights
+                VStack(spacing: 20) {
+                    Text("Your fertility journey, supported by someone who's been there.")
+                        .font(.subheadline)
+                        .foregroundColor(Color(hex: "1B4332"))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
+
+                    VStack(alignment: .leading, spacing: 14) {
+                        FeatureBullet(icon: "person.2.fill",
+                                      text: "Clinic-assigned peer mentors for your treatment journey")
+                        FeatureBullet(icon: "message.fill",
+                                      text: "Private, secure messaging with your mentor")
+                        FeatureBullet(icon: "book.fill",
+                                      text: "Phase-by-phase resources and guidance")
+                    }
+
+                    // Legal
+                    (Text("By signing in, you agree to our ")
+                        .foregroundColor(.secondary)
+                    + Text("Terms of Service")
+                        .foregroundColor(Color(hex: "1B4332"))
+                        .underline()
+                    + Text(" and ")
+                        .foregroundColor(.secondary)
+                    + Text("Privacy Policy")
+                        .foregroundColor(Color(hex: "1B4332"))
+                        .underline())
+                        .font(.caption)
+                        .multilineTextAlignment(.center)
+                        .overlay(
+                            HStack {
+                                Link("", destination: termsURL)
+                                    .frame(maxWidth: .infinity)
+                                Link("", destination: privacyURL)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .opacity(0.01)
+                        )
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 8)
 
                 Spacer(minLength: 40)
             }
@@ -204,6 +245,22 @@ struct LoginView: View {
                 showError = true
             }
             isLoading = false
+        }
+    }
+}
+
+private struct FeatureBullet: View {
+    let icon: String
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .foregroundColor(Color(hex: "B8860B"))
+                .frame(width: 20)
+            Text(text)
+                .font(.subheadline)
+                .foregroundColor(.primary)
         }
     }
 }
