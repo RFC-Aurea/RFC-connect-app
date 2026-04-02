@@ -46,11 +46,11 @@ struct PatientDetailView: View {
                                 .font(.title3.bold())
                             Text(patient.email)
                                 .font(.subheadline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color(hex: "666666"))
                             if let username = patient.username {
                                 Text("@\(username)")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color(hex: "666666"))
                             }
                         }
                         .frame(maxWidth: .infinity)
@@ -98,7 +98,7 @@ struct PatientDetailView: View {
                                         HStack {
                                             VStack(alignment: .leading, spacing: 2) {
                                                 Text(mentor.name).font(.subheadline.bold())
-                                                Text(mentor.email).font(.caption).foregroundColor(.secondary)
+                                                Text(mentor.email).font(.caption).foregroundColor(Color(hex: "666666"))
                                             }
                                             Spacer()
                                             if selectedMentorId == mentor.id {

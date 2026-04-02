@@ -30,7 +30,7 @@ struct SettingsView: View {
                                     )
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(user.name).font(.headline)
-                                    Text(user.email).font(.caption).foregroundColor(.secondary)
+                                    Text(user.email).font(.caption).foregroundColor(Color(hex: "666666"))
                                     Text(user.role.rawValue.capitalized)
                                         .font(.caption.bold())
                                         .padding(.horizontal, 8)
@@ -39,7 +39,7 @@ struct SettingsView: View {
                                         .foregroundColor(Color(hex: "1B4332"))
                                         .cornerRadius(6)
                                     if let username = user.username {
-                                        Text("@\(username)").font(.caption).foregroundColor(.secondary)
+                                        Text("@\(username)").font(.caption).foregroundColor(Color(hex: "666666"))
                                     }
                                 }
                             }
@@ -51,7 +51,7 @@ struct SettingsView: View {
                     Section("Security") {
                         Button(action: { showChangePassword = true }) {
                             Label("Change Password", systemImage: "lock.rotation")
-                                .foregroundColor(.primary)
+                                .foregroundColor(Color(hex: "1B4332"))
                         }
                     }
 
@@ -59,11 +59,11 @@ struct SettingsView: View {
                     Section("Legal") {
                         Link(destination: URL(string: "https://www.rejuvenatingfertility.com/privacy-policy")!) {
                             Label("Privacy Policy", systemImage: "hand.raised.fill")
-                                .foregroundColor(.primary)
+                                .foregroundColor(Color(hex: "1B4332"))
                         }
                         Link(destination: URL(string: "https://www.rejuvenatingfertility.com/terms-of-service")!) {
                             Label("Terms of Service", systemImage: "doc.text.fill")
-                                .foregroundColor(.primary)
+                                .foregroundColor(Color(hex: "1B4332"))
                         }
                     }
 
@@ -72,12 +72,12 @@ struct SettingsView: View {
                         HStack {
                             Label("Version", systemImage: "info.circle")
                             Spacer()
-                            Text("1.0.0").foregroundColor(.secondary)
+                            Text("1.0.0").foregroundColor(Color(hex: "666666"))
                         }
                         HStack {
                             Label("Build", systemImage: "hammer")
                             Spacer()
-                            Text("RFC Mentor Connect").foregroundColor(.secondary)
+                            Text("RFC Mentor Connect").foregroundColor(Color(hex: "666666"))
                         }
                     }
 
@@ -126,17 +126,17 @@ struct SettingsView: View {
                 VStack(spacing: 20) {
                     VStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Current Password").font(.caption.bold()).foregroundColor(.secondary)
+                            Text("Current Password").font(.caption.bold()).foregroundColor(Color(hex: "666666"))
                             SecureField("Current password", text: $currentPassword)
                                 .textFieldStyle(RFCTextFieldStyle())
                         }
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("New Password").font(.caption.bold()).foregroundColor(.secondary)
+                            Text("New Password").font(.caption.bold()).foregroundColor(Color(hex: "666666"))
                             SecureField("At least 8 characters", text: $newPassword)
                                 .textFieldStyle(RFCTextFieldStyle())
                         }
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("Confirm New Password").font(.caption.bold()).foregroundColor(.secondary)
+                            Text("Confirm New Password").font(.caption.bold()).foregroundColor(Color(hex: "666666"))
                             SecureField("Confirm new password", text: $confirmNewPassword)
                                 .textFieldStyle(RFCTextFieldStyle())
                         }

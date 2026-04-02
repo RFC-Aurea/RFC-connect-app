@@ -104,16 +104,16 @@ struct JourneyHubView: View {
                             }
                             Text(phase)
                                 .font(.subheadline.bold())
-                                .foregroundColor(.primary)
+                                .foregroundColor(Color(hex: "1B4332"))
                         }
                         Text("\(phaseResources.count) resource\(phaseResources.count == 1 ? "" : "s")")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(hex: "666666"))
                     }
                     Spacer()
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(hex: "666666"))
                 }
                 .padding(16)
                 .background(isCurrent ? Color(hex: "1B4332").opacity(0.05) : Color.white)
@@ -132,17 +132,17 @@ struct JourneyHubView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(resource.title)
                                         .font(.subheadline)
-                                        .foregroundColor(.primary)
+                                        .foregroundColor(Color(hex: "1B4332"))
                                     if let readTime = resource.readTime {
                                         Text(readTime)
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(Color(hex: "666666"))
                                     }
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.caption2)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color(hex: "666666"))
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
@@ -173,10 +173,10 @@ struct JourneyHubView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(resource.title)
                     .font(.subheadline.bold())
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color(hex: "1B4332"))
                 Text(resource.summary)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
                     .lineLimit(2)
                 if let readTime = resource.readTime {
                     Text(readTime)
@@ -187,7 +187,7 @@ struct JourneyHubView: View {
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "666666"))
         }
         .padding(16)
         .background(Color.white)

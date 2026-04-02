@@ -154,7 +154,7 @@ struct AdminDashboardView: View {
             HStack {
                 Text(title)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color(hex: "1B4332"))
                 Spacer()
                 Text("\(count)")
                     .font(.caption.bold())
@@ -196,7 +196,7 @@ struct AdminDashboardView: View {
                 if let phase = patient.phase {
                     Text(phase)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(hex: "666666"))
                         .lineLimit(1)
                 }
                 Text(mentorName(for: patient.mentorId))
@@ -207,7 +207,7 @@ struct AdminDashboardView: View {
             statusBadge(status: patient.status)
             Image(systemName: "chevron.right")
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "666666"))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -231,7 +231,7 @@ struct AdminDashboardView: View {
                     .font(.subheadline.bold())
                 Text(mentor.email)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
             }
             Spacer()
             Image(systemName: onboarded ? "checkmark.circle.fill" : "clock.fill")
@@ -240,7 +240,7 @@ struct AdminDashboardView: View {
             statusBadge(status: mentor.status)
             Image(systemName: "chevron.right")
                 .font(.caption2)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "666666"))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -263,7 +263,7 @@ struct AdminDashboardView: View {
                     .font(.subheadline.bold())
                 Text(admin.email)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
             }
             Spacer()
             statusBadge(status: admin.status)
@@ -312,7 +312,7 @@ struct AdminDashboardView: View {
                 .foregroundColor(color)
             Text(label)
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "666666"))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
@@ -355,7 +355,7 @@ struct MentorDetailView: View {
                 Section("Assigned Patients (\(assignedPatients.count))") {
                     if assignedPatients.isEmpty {
                         Text("No patients assigned")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(hex: "666666"))
                     } else {
                         ForEach(assignedPatients) { patient in
                             VStack(alignment: .leading, spacing: 2) {
@@ -363,7 +363,7 @@ struct MentorDetailView: View {
                                     .font(.subheadline.bold())
                                 Text(patient.phase ?? "Pre-Consult & Decision")
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color(hex: "666666"))
                             }
                         }
                     }

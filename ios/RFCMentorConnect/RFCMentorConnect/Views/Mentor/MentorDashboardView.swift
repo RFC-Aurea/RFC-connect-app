@@ -52,7 +52,7 @@ struct MentorDashboardView: View {
             }
             Text("Remember: you provide peer support only. Always refer medical questions to the RFC clinical team. Respond to messages within 48 hours when possible.")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "666666"))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(20)
@@ -93,11 +93,11 @@ struct MentorDashboardView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(mentee.name)
                     .font(.subheadline.bold())
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color(hex: "1B4332"))
                 if let phase = mentee.phase {
                     Text(phase)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(hex: "666666"))
                 }
             }
             Spacer()
@@ -105,7 +105,7 @@ struct MentorDashboardView: View {
                 .foregroundColor(Color(hex: "1B4332"))
             Image(systemName: "chevron.right")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "666666"))
         }
         .padding(16)
         .background(Color.white)
@@ -118,12 +118,12 @@ struct MentorDashboardView: View {
         VStack(spacing: 12) {
             Image(systemName: "person.2.slash")
                 .font(.system(size: 48))
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "666666"))
             Text("No Mentees Yet")
                 .font(.headline)
             Text("Patients will appear here once the admin assigns them to you.")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "666666"))
                 .multilineTextAlignment(.center)
         }
         .padding(40)
@@ -143,7 +143,7 @@ struct MentorDashboardView: View {
                     .foregroundColor(color)
                 Text(label)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
             }
             Spacer()
         }

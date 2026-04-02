@@ -25,7 +25,7 @@ struct ResourceDetailView: View {
                                     .textCase(.uppercase)
                                 Text(resource.phase)
                                     .font(.caption)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color(hex: "666666"))
                             }
                         }
 
@@ -35,12 +35,12 @@ struct ResourceDetailView: View {
 
                         Text(resource.summary)
                             .font(.subheadline)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(hex: "666666"))
 
                         if let readTime = resource.readTime {
                             Label(readTime, systemImage: "clock")
                                 .font(.caption)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color(hex: "666666"))
                         }
                     }
                     .padding(20)
@@ -53,7 +53,7 @@ struct ResourceDetailView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text(content)
                                 .font(.body)
-                                .foregroundColor(.primary)
+                                .foregroundColor(Color(hex: "1B4332"))
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .padding(20)
@@ -65,10 +65,10 @@ struct ResourceDetailView: View {
                     // Disclaimer
                     HStack(spacing: 8) {
                         Image(systemName: "info.circle")
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(hex: "666666"))
                         Text("This content is for informational purposes only. Always consult your RFC medical team for personalized guidance.")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(hex: "666666"))
                     }
                     .padding(12)
                     .background(Color.gray.opacity(0.08))

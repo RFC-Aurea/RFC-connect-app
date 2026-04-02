@@ -23,7 +23,6 @@
 		AA000014 /* PatientDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100014 /* PatientDetailView.swift */; };
 		AA000015 /* PatientDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100015 /* PatientDashboardView.swift */; };
 		AA000016 /* MentorDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100016 /* MentorDashboardView.swift */; };
-		AA000030 /* MentorResourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100030 /* MentorResourcesView.swift */; };
 		AA000017 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100017 /* ChatView.swift */; };
 		AA000018 /* VoiceRecorderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100018 /* VoiceRecorderView.swift */; };
 		AA000019 /* AttachmentPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100019 /* AttachmentPickerView.swift */; };
@@ -31,6 +30,8 @@
 		AA000021 /* ResourceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100021 /* ResourceDetailView.swift */; };
 		AA000022 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100022 /* SettingsView.swift */; };
 		AA000023 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA100023 /* Assets.xcassets */; };
+		AA000030 /* MentorResourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100030 /* MentorResourcesView.swift */; };
+		F8E1C01D2F6DCEA90063E454 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = AAPKG0001 /* SocketIO */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -50,7 +51,6 @@
 		AA100014 /* PatientDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientDetailView.swift; sourceTree = "<group>"; };
 		AA100015 /* PatientDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatientDashboardView.swift; sourceTree = "<group>"; };
 		AA100016 /* MentorDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MentorDashboardView.swift; sourceTree = "<group>"; };
-		AA100030 /* MentorResourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MentorResourcesView.swift; sourceTree = "<group>"; };
 		AA100017 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		AA100018 /* VoiceRecorderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceRecorderView.swift; sourceTree = "<group>"; };
 		AA100019 /* AttachmentPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentPickerView.swift; sourceTree = "<group>"; };
@@ -58,6 +58,7 @@
 		AA100021 /* ResourceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResourceDetailView.swift; sourceTree = "<group>"; };
 		AA100022 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		AA100023 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA100030 /* MentorResourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MentorResourcesView.swift; sourceTree = "<group>"; };
 		AAPROD001 /* RFCMentorConnect.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RFCMentorConnect.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -66,13 +67,14 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F8E1C01D2F6DCEA90063E454 /* SocketIO in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		AAGROUP00 /* root */ = {
+		AAGROUP00 = {
 			isa = PBXGroup;
 			children = (
 				AAGROUP01 /* RFCMentorConnect */,
@@ -234,7 +236,6 @@
 				TargetAttributes = {
 					AATARGET1 = {
 						CreatedOnToolsVersion = 15.0;
-						DevelopmentTeam = 6BU8UKWQXR;
 					};
 				};
 			};
@@ -248,7 +249,7 @@
 			);
 			mainGroup = AAGROUP00;
 			packageReferences = (
-				AAPKG0003 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */,
+				AAPKG0003 /* XCRemoteSwiftPackageReference "socket" */,
 			);
 			productRefGroup = AAGROUP99 /* Products */;
 			projectDirPath = "";
@@ -366,6 +367,37 @@
 			};
 			name = Debug;
 		};
+		AABCDBUG1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 6BU8UKWQXR;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "RFC Mentor Connect needs camera access to send photos in chat.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "RFC Mentor Connect needs microphone access to send voice messages.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "RFC Mentor Connect needs photo library access to send images in chat.";
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rejuvenatingfertility.mentorconnect;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
 		AABCREL0 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -421,40 +453,12 @@
 			};
 			name = Release;
 		};
-		AABCDBUG1 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 6BU8UKWQXR;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "RFC Mentor Connect needs camera access to send photos in chat.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "RFC Mentor Connect needs microphone access to send voice messages.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "RFC Mentor Connect needs photo library access to send images in chat.";
-				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
-				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.rfcfertility.mentorconnect";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
 		AABCREL1 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6BU8UKWQXR;
@@ -471,8 +475,9 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.rfcfertility.mentorconnect";
+				PRODUCT_BUNDLE_IDENTIFIER = com.rejuvenatingfertility.mentorconnect;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -503,7 +508,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		AAPKG0003 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */ = {
+		AAPKG0003 /* XCRemoteSwiftPackageReference "socket" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
 			requirement = {
@@ -516,11 +521,10 @@
 /* Begin XCSwiftPackageProductDependency section */
 		AAPKG0001 /* SocketIO */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = AAPKG0003 /* XCRemoteSwiftPackageReference "socket.io-client-swift" */;
+			package = AAPKG0003 /* XCRemoteSwiftPackageReference "socket" */;
 			productName = SocketIO;
 		};
 /* End XCSwiftPackageProductDependency section */
-
 	};
 	rootObject = AAPROJECT1 /* Project object */;
 }

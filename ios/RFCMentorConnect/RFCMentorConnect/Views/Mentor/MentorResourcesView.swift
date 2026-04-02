@@ -44,7 +44,7 @@ struct MentorResourcesView: View {
                 .foregroundColor(Color(hex: "1B4332"))
             Text("Reference materials your patients can access")
                 .font(.subheadline)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "666666"))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
@@ -80,15 +80,15 @@ struct MentorResourcesView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(phase)
                             .font(.subheadline.bold())
-                            .foregroundColor(.primary)
+                            .foregroundColor(Color(hex: "1B4332"))
                         Text("\(phaseResources.count) resource\(phaseResources.count == 1 ? "" : "s")")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(hex: "666666"))
                     }
                     Spacer()
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(hex: "666666"))
                 }
                 .padding(16)
                 .background(Color.white)
@@ -107,17 +107,17 @@ struct MentorResourcesView: View {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(resource.title)
                                         .font(.subheadline)
-                                        .foregroundColor(.primary)
+                                        .foregroundColor(Color(hex: "1B4332"))
                                     if let readTime = resource.readTime {
                                         Text(readTime)
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundColor(Color(hex: "666666"))
                                     }
                                 }
                                 Spacer()
                                 Image(systemName: "chevron.right")
                                     .font(.caption2)
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color(hex: "666666"))
                             }
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)

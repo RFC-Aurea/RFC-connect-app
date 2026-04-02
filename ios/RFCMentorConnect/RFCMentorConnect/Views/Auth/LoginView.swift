@@ -50,7 +50,7 @@ struct LoginView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Email")
                             .font(.caption.bold())
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(hex: "666666"))
                         TextField("your@email.com", text: $email)
                             .textFieldStyle(RFCTextFieldStyle())
                             .keyboardType(.emailAddress)
@@ -61,7 +61,7 @@ struct LoginView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Password")
                             .font(.caption.bold())
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(hex: "666666"))
                         SecureField("Password", text: $password)
                             .textFieldStyle(RFCTextFieldStyle())
                     }
@@ -112,12 +112,12 @@ struct LoginView: View {
 
                     // Legal
                     (Text("By signing in, you agree to our ")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(hex: "666666"))
                     + Text("Terms of Service")
                         .foregroundColor(Color(hex: "1B4332"))
                         .underline()
                     + Text(" and ")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(hex: "666666"))
                     + Text("Privacy Policy")
                         .foregroundColor(Color(hex: "1B4332"))
                         .underline())
@@ -162,14 +162,14 @@ struct LoginView: View {
                         .foregroundColor(Color(hex: "1B4332"))
                     Text("A code was sent to your phone")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(hex: "666666"))
                 }
 
                 VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("6-Digit Code")
                             .font(.caption.bold())
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(hex: "666666"))
                         TextField("000000", text: $verificationCode)
                             .textFieldStyle(RFCTextFieldStyle())
                             .keyboardType(.numberPad)
@@ -260,7 +260,7 @@ private struct FeatureBullet: View {
                 .frame(width: 20)
             Text(text)
                 .font(.subheadline)
-                .foregroundColor(.primary)
+                .foregroundColor(Color(hex: "1B4332"))
         }
     }
 }
@@ -268,6 +268,7 @@ private struct FeatureBullet: View {
 struct RFCTextFieldStyle: TextFieldStyle {
     func _body(configuration: TextField<Self._Label>) -> some View {
         configuration
+            .foregroundColor(Color(hex: "1B4332"))
             .padding(14)
             .background(Color.white)
             .cornerRadius(10)

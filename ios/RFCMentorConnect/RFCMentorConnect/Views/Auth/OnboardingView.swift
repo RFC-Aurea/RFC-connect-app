@@ -50,13 +50,13 @@ struct OnboardingView: View {
                     .foregroundColor(Color(hex: "1B4332"))
                 Text("Please add your phone number for account verification.")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
             }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("Phone Number")
                     .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
                 TextField("+1 (555) 000-0000", text: $phone)
                     .textFieldStyle(RFCTextFieldStyle())
                     .keyboardType(.phonePad)
@@ -81,13 +81,13 @@ struct OnboardingView: View {
                     .foregroundColor(Color(hex: "1B4332"))
                 Text("Enter the 6-digit code sent to \(phone).")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
             }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("Verification Code")
                     .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
                 TextField("000000", text: $code)
                     .textFieldStyle(RFCTextFieldStyle())
                     .keyboardType(.numberPad)
@@ -117,13 +117,13 @@ struct OnboardingView: View {
                     .foregroundColor(Color(hex: "1B4332"))
                 Text("Choose a strong password for your account.")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
             }
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("New Password")
                     .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
                 SecureField("At least 8 characters", text: $newPassword)
                     .textFieldStyle(RFCTextFieldStyle())
             }
@@ -131,7 +131,7 @@ struct OnboardingView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Confirm Password")
                     .font(.caption.bold())
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
                 SecureField("Confirm password", text: $confirmPassword)
                     .textFieldStyle(RFCTextFieldStyle())
             }

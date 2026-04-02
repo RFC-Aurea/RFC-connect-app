@@ -34,7 +34,7 @@ struct CreateUserView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text("Role")
                                     .font(.caption.bold())
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color(hex: "666666"))
                                 Picker("Role", selection: $role) {
                                     Text("Patient").tag("patient")
                                     Text("Mentor").tag("mentor")
@@ -103,7 +103,7 @@ struct CreateUserView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(label)
                 .font(.caption.bold())
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "666666"))
             TextField(placeholder, text: text)
                 .textFieldStyle(RFCTextFieldStyle())
         }

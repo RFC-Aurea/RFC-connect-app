@@ -27,6 +27,7 @@ struct ContentView: View {
                 RoleTabView()
             }
         }
+        .preferredColorScheme(.light)
         .animation(.easeInOut(duration: 0.3), value: auth.isAuthenticated)
         .animation(.easeInOut(duration: 0.3), value: auth.requiresOnboarding)
         .onAppear {

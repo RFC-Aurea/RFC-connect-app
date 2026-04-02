@@ -64,7 +64,7 @@ struct VoiceRecorderView: View {
 
             Text(isRecording ? "Tap to stop" : "Tap or hold to record")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "666666"))
 
             Button("Cancel") { dismiss() }
                 .foregroundColor(.red)

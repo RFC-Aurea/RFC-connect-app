@@ -160,12 +160,12 @@ struct ChatView: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                         .background(isMe ? Color(hex: "1B4332") : Color.white)
-                        .foregroundColor(isMe ? .white : .primary)
+                        .foregroundColor(isMe ? .white : Color(hex: "1B4332"))
                         .cornerRadius(18)
                 }
                 Text(formatTime(message.createdAt))
                     .font(.caption2)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
                     .padding(.horizontal, 4)
             }
             if !isMe { Spacer(minLength: 60) }
@@ -290,7 +290,7 @@ private struct PhotoBubble: View {
                     .scaledToFill()
             } else if failed {
                 Image(systemName: "photo")
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
                     .frame(width: 200, height: 150)
             } else {
                 ProgressView()
@@ -338,11 +338,11 @@ private struct VoiceBubble: View {
                     .foregroundColor(isMe ? .white : Color(hex: "1B4332"))
                 Text("Voice Message")
                     .font(.subheadline)
-                    .foregroundColor(isMe ? .white : .primary)
+                    .foregroundColor(isMe ? .white : Color(hex: "1B4332"))
                 if let dur = durationSeconds {
                     Text("\(dur)s")
                         .font(.caption)
-                        .foregroundColor(isMe ? .white.opacity(0.7) : .secondary)
+                        .foregroundColor(isMe ? .white.opacity(0.7) : Color(hex: "666666"))
                 }
             }
             .padding(.horizontal, 14)
@@ -386,7 +386,7 @@ private struct DocumentBubble: View {
                 }
                 Text(displayName)
                     .font(.subheadline)
-                    .foregroundColor(isMe ? .white : .primary)
+                    .foregroundColor(isMe ? .white : Color(hex: "1B4332"))
                     .lineLimit(2)
             }
             .padding(.horizontal, 14)

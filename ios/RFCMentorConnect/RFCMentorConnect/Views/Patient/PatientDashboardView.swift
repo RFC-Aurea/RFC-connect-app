@@ -64,7 +64,7 @@ struct PatientDashboardView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Welcome back,")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(hex: "666666"))
                     Text(auth.currentUser?.name ?? "")
                         .font(.title2.bold())
                         .foregroundColor(Color(hex: "1B4332"))
@@ -79,7 +79,7 @@ struct PatientDashboardView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Current Phase")
                         .font(.caption.bold())
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color(hex: "666666"))
                     Text(phase)
                         .font(.subheadline.bold())
                         .foregroundColor(Color(hex: "1B4332"))
@@ -88,7 +88,7 @@ struct PatientDashboardView: View {
                     HStack {
                         Text("Phase \(Int(phaseProgress * Double(phases.count))) of \(phases.count)")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color(hex: "666666"))
                         Spacer()
                         Text("\(Int(phaseProgress * 100))%")
                             .font(.caption.bold())
@@ -98,7 +98,7 @@ struct PatientDashboardView: View {
             } else {
                 Text("Your clinic will set your phase soon")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
             }
         }
         .padding(20)
@@ -112,7 +112,7 @@ struct PatientDashboardView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Your Mentor")
                 .font(.caption.bold())
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "666666"))
 
             HStack(spacing: 14) {
                 Circle()
@@ -126,7 +126,7 @@ struct PatientDashboardView: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(mentor.name).font(.headline)
-                    Text("RFC Peer Mentor").font(.caption).foregroundColor(.secondary)
+                    Text("RFC Peer Mentor").font(.caption).foregroundColor(Color(hex: "666666"))
                 }
                 Spacer()
             }
@@ -164,7 +164,7 @@ struct PatientDashboardView: View {
                     .font(.subheadline.bold())
                 Text("Your clinic will assign a mentor soon")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
             }
         }
         .padding(20)
@@ -199,10 +199,10 @@ struct PatientDashboardView: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(resource.title)
                     .font(.subheadline.bold())
-                    .foregroundColor(.primary)
+                    .foregroundColor(Color(hex: "1B4332"))
                 Text(resource.summary)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color(hex: "666666"))
                     .lineLimit(2)
                 if let readTime = resource.readTime {
                     Text(readTime)
@@ -213,7 +213,7 @@ struct PatientDashboardView: View {
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(Color(hex: "666666"))
         }
         .padding(16)
         .background(Color.white)
