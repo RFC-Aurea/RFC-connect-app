@@ -238,3 +238,103 @@ export async function sendWelcomeEmail(params: {
     throw new Error(`[email] Resend error: ${error.message}`);
   }
 }
+
+export async function sendPasswordResetEmail(params: {
+  to: string;
+  tempPassword: string;
+}): Promise<void> {
+  const { to, tempPassword } = params;
+
+  const subject = "RFC Mentor Connect — Password Reset";
+
+  const header = `
+    <tr>
+      <td style="background-color:#1B4332;padding:32px 40px;text-align:center;">
+        <h1 style="margin:0;color:#F5F5F0;font-size:26px;font-weight:700;letter-spacing:0.5px;">RFC Mentor Connect</h1>
+        <p style="margin:8px 0 0;color:#B8860B;font-size:14px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Rejuvenating Fertility Center</p>
+      </td>
+    </tr>`;
+
+  const credentialsBox = `
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#F5F5F0;border:2px solid #1B4332;border-radius:8px;margin-bottom:28px;">
+      <tr>
+        <td style="padding:20px 24px;">
+          <p style="margin:0 0 10px;font-size:13px;color:#444;">
+            <strong style="color:#1B4332;">Email:</strong>&nbsp; ${to}
+          </p>
+          <p style="margin:0;font-size:13px;color:#444;">
+            <strong style="color:#1B4332;">Temporary Password:</strong>&nbsp;
+            <span style="font-family:monospace;background-color:#e8e8e2;padding:3px 8px;border-radius:4px;font-size:14px;">${tempPassword}</span>
+          </p>
+        </td>
+      </tr>
+    </table>`;
+
+  const footer = `
+    <tr>
+      <td style="background-color:#F5F5F0;padding:20px 40px;text-align:center;border-top:2px solid #1B4332;">
+        <p style="margin:0;color:#888;font-size:12px;">Questions? Contact your RFC clinical team.</p>
+        <p style="margin:6px 0 0;color:#B8860B;font-size:12px;font-weight:600;">© 2026 Rejuvenating Fertility Center</p>
+      </td>
+    </tr>`;
+
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#eaeae6;font-family:Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#eaeae6;padding:24px 0;">
+    <tr>
+      <td align="center">
+        <table width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:10px;overflow:hidden;max-width:600px;border:1px solid #d4d4cc;">
+          ${header}
+          <tr>
+            <td style="padding:40px;">
+              <h2 style="margin:0 0 16px;color:#1B4332;font-size:22px;">Password Reset</h2>
+              <p style="margin:0 0 16px;color:#475569;font-size:15px;line-height:1.7;">
+                A password reset was requested for your <strong>RFC Mentor Connect</strong> account.
+              </p>
+              <p style="margin:0 0 24px;color:#475569;font-size:15px;line-height:1.7;">
+                Use the temporary password below to sign in. You will be prompted to create a new password.
+              </p>
+              <h3 style="margin:0 0 12px;color:#1B4332;font-size:16px;">Your New Credentials</h3>
+              ${credentialsBox}
+              <p style="margin:0;color:#888;font-size:13px;line-height:1.6;">
+                If you did not request this reset, you can safely ignore this email — your previous password will no longer work and you should contact your RFC clinical team.
+              </p>
+            </td>
+          </tr>
+          ${footer}
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`.trim();
+
+  if (!emailEnabled) {
+    console.log(
+      `[email] Dev mode — would send password reset email to ${to}:\n` +
+        `  Subject: ${subject}\n` +
+        `  TempPassword: ${tempPassword}`,
+    );
+    return;
+  }
+
+  const resend = new Resend(resendApiKey!);
+  const { error } = await resend.emails.send({
+    from: "RFC Mentor Connect <info@rejuvenatingfertility.com>",
+    replyTo: "alifiyab@rfcfertility.com",
+    to,
+    subject,
+    html,
+  });
+
+  if (error) {
+    throw new Error(`[email] Resend error: ${error.message}`);
+  }
+}

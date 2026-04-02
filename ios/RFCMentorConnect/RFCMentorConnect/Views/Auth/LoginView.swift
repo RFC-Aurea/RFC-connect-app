@@ -13,6 +13,7 @@ struct LoginView: View {
     @State private var showVerification = false
     @State private var verificationCode = ""
     @State private var verificationUserId: Int? = nil
+    @State private var showForgotPassword = false
 
     var body: some View {
         ZStack {
@@ -22,6 +23,9 @@ struct LoginView: View {
             } else {
                 loginForm
             }
+        }
+        .sheet(isPresented: $showForgotPassword) {
+            ForgotPasswordSheet()
         }
     }
 
@@ -90,6 +94,12 @@ struct LoginView: View {
                     }
                     .disabled(isLoading || email.isEmpty || password.isEmpty)
                     .opacity((email.isEmpty || password.isEmpty) ? 0.6 : 1)
+
+                    Button(action: { showForgotPassword = true }) {
+                        Text("Forgot Password?")
+                            .font(.subheadline)
+                            .foregroundColor(Color(hex: "1B4332"))
+                    }
                 }
                 .padding(.horizontal, 24)
 
@@ -261,6 +271,136 @@ private struct FeatureBullet: View {
             Text(text)
                 .font(.subheadline)
                 .foregroundColor(Color(hex: "1B4332"))
+        }
+    }
+}
+
+struct ForgotPasswordSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var email = ""
+    @State private var isLoading = false
+    @State private var errorMessage = ""
+    @State private var showError = false
+    @State private var submitted = false
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(hex: "F5F5F0").ignoresSafeArea()
+                ScrollView {
+                    VStack(spacing: 24) {
+                        Spacer(minLength: 20)
+
+                        ZStack {
+                            Circle()
+                                .fill(Color(hex: "1B4332"))
+                                .frame(width: 88, height: 88)
+                            Image(systemName: "envelope.badge.fill")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 40, height: 40)
+                                .foregroundColor(Color(hex: "B8860B"))
+                        }
+
+                        if submitted {
+                            VStack(spacing: 12) {
+                                Text("Check Your Email")
+                                    .font(.title2.bold())
+                                    .foregroundColor(Color(hex: "1B4332"))
+                                Text("If an account with that email exists, we've sent a temporary password. Use it to sign in — you'll be prompted to create a new one.")
+                                    .font(.subheadline)
+                                    .foregroundColor(Color(hex: "666666"))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 8)
+                            }
+
+                            Button(action: { dismiss() }) {
+                                Text("Back to Sign In")
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                                    .background(Color(hex: "1B4332"))
+                                    .foregroundColor(.white)
+                                    .cornerRadius(12)
+                            }
+                            .padding(.horizontal, 24)
+                        } else {
+                            VStack(spacing: 12) {
+                                Text("Reset Password")
+                                    .font(.title2.bold())
+                                    .foregroundColor(Color(hex: "1B4332"))
+                                Text("Enter the email address associated with your account and we'll send you a temporary password.")
+                                    .font(.subheadline)
+                                    .foregroundColor(Color(hex: "666666"))
+                                    .multilineTextAlignment(.center)
+                                    .padding(.horizontal, 8)
+                            }
+
+                            VStack(spacing: 16) {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text("Email")
+                                        .font(.caption.bold())
+                                        .foregroundColor(Color(hex: "666666"))
+                                    TextField("your@email.com", text: $email)
+                                        .textFieldStyle(RFCTextFieldStyle())
+                                        .keyboardType(.emailAddress)
+                                        .textInputAutocapitalization(.never)
+                                        .autocorrectionDisabled()
+                                }
+
+                                if showError {
+                                    Text(errorMessage)
+                                        .font(.caption)
+                                        .foregroundColor(.red)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+
+                                Button(action: resetPassword) {
+                                    Group {
+                                        if isLoading {
+                                            ProgressView().tint(.white)
+                                        } else {
+                                            Text("Send Reset Email")
+                                                .font(.headline)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 50)
+                                    .background(Color(hex: "1B4332"))
+                                    .foregroundColor(.white)
+                                    .cornerRadius(12)
+                                }
+                                .disabled(isLoading || email.isEmpty)
+                                .opacity(email.isEmpty ? 0.6 : 1)
+                            }
+                            .padding(.horizontal, 24)
+                        }
+
+                        Spacer(minLength: 40)
+                    }
+                }
+            }
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                        .foregroundColor(Color(hex: "1B4332"))
+                }
+            }
+        }
+    }
+
+    private func resetPassword() {
+        isLoading = true
+        showError = false
+        Task {
+            do {
+                _ = try await APIClient.shared.forgotPassword(email: email)
+                submitted = true
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
+            isLoading = false
         }
     }
 }

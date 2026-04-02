@@ -14,7 +14,7 @@ import {
   sendVerificationCode,
   checkVerificationCode,
 } from "./twilio";
-import { validateEmailDomain, sendWelcomeEmail } from "./email";
+import { validateEmailDomain, sendWelcomeEmail, sendPasswordResetEmail } from "./email";
 import {
   upload,
   uploadFile,
@@ -248,6 +248,41 @@ export async function registerRoutes(
       });
 
       res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/auth/forgot-password", async (req, res, next) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        res.status(400).json({ message: "Email is required" });
+        return;
+      }
+
+      // Always return success to prevent email enumeration
+      const genericMessage = "If an account with that email exists, a password reset email has been sent.";
+
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        res.json({ message: genericMessage });
+        return;
+      }
+
+      const tempPassword = randomBytes(4).toString("hex");
+      const hashed = await hashPassword(tempPassword);
+      await storage.updateUser(user.id, { password: hashed, mustChangePassword: true });
+
+      await storage.createAuditLog({
+        actorId: user.id,
+        action: "forgot_password",
+        targetId: user.id,
+        details: `Password reset requested for ${email}`,
+      });
+
+      sendPasswordResetEmail({ to: email, tempPassword })
+        .catch(err => console.error("[email] Failed to send password reset email:", err));
+
+      res.json({ message: genericMessage });
     } catch (err) { next(err); }
   });
 

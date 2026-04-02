@@ -140,6 +140,17 @@ final class APIClient {
         _ = try await requestWithRetry("/api/auth/change-password", method: "POST", body: ["currentPassword": currentPassword, "newPassword": newPassword])
     }
 
+    struct ForgotPasswordResponse: Codable {
+        let message: String
+    }
+
+    func forgotPassword(email: String) async throws -> ForgotPasswordResponse {
+        let (data, response) = try await request("/api/auth/forgot-password", method: "POST", body: ["email": email])
+        guard let http = response as? HTTPURLResponse else { throw APIError.noData }
+        let validated = try validate(data, statusCode: http.statusCode)
+        return try decode(ForgotPasswordResponse.self, from: validated)
+    }
+
     func getMe() async throws -> User {
         let data = try await requestWithRetry("/api/auth/me")
         return try decode(User.self, from: data)

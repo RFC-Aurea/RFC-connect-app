@@ -40,6 +40,11 @@ struct OnboardingView: View {
                 }
             }
         }
+        .onAppear {
+            if auth.currentUser?.phoneVerified == true {
+                step = 3
+            }
+        }
     }
 
     private var phoneStep: some View {
