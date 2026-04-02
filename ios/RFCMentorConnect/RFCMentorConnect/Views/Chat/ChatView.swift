@@ -312,44 +312,143 @@ private struct PhotoBubble: View {
     }
 }
 
-// MARK: - Voice Bubble
+// MARK: - Voice Bubble (WhatsApp-style)
 
 private struct VoiceBubble: View {
     let filePath: String
     let durationSeconds: Int?
     let isMe: Bool
-    let playerManager: VoicePlayerManager
+    @ObservedObject var playerManager: VoicePlayerManager
     let messageId: Int
 
     private var isPlaying: Bool {
         playerManager.playingMessageId == messageId
     }
 
+    private var isThisDownloading: Bool {
+        playerManager.downloadingMessageId == messageId
+    }
+
+    private var progress: Double {
+        guard playerManager.playingMessageId == messageId else { return 0 }
+        guard playerManager.duration > 0 else { return 0 }
+        return playerManager.currentTime / playerManager.duration
+    }
+
+    private var displayTime: String {
+        if isPlaying {
+            return formatSeconds(playerManager.currentTime)
+        }
+        if let dur = durationSeconds, dur > 0 {
+            return formatSeconds(Double(dur))
+        }
+        if playerManager.playingMessageId == messageId, playerManager.duration > 0 {
+            return formatSeconds(playerManager.duration)
+        }
+        return "0:00"
+    }
+
+    private var totalTime: String {
+        if playerManager.playingMessageId == messageId, playerManager.duration > 0 {
+            return formatSeconds(playerManager.duration)
+        }
+        if let dur = durationSeconds, dur > 0 {
+            return formatSeconds(Double(dur))
+        }
+        return "0:00"
+    }
+
+    /// Deterministic waveform bar heights seeded by messageId
+    private var waveformHeights: [CGFloat] {
+        var seed = UInt64(abs(messageId))
+        return (0..<28).map { _ in
+            seed = seed &* 6364136223846793005 &+ 1442695040888963407
+            let normalized = CGFloat((seed >> 33) % 100) / 100.0
+            return 4 + normalized * 16 // heights between 4 and 20
+        }
+    }
+
+    private let primaryColor = Color(hex: "1B4332")
+    private var accentColor: Color { isMe ? .white : primaryColor }
+    private var dimColor: Color { isMe ? .white.opacity(0.4) : Color(hex: "999999") }
+    private var progressColor: Color { isMe ? .white : primaryColor }
+    private var trackColor: Color { isMe ? .white.opacity(0.25) : Color(hex: "DDDDDD") }
+
     var body: some View {
-        Button {
-            if isPlaying {
-                playerManager.pause()
-            } else {
-                playerManager.play(filePath: filePath, messageId: messageId)
-            }
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: isPlaying ? "pause.fill" : "play.fill")
-                    .foregroundColor(isMe ? .white : Color(hex: "1B4332"))
-                Text("Voice Message")
-                    .font(.subheadline)
-                    .foregroundColor(isMe ? .white : Color(hex: "1B4332"))
-                if let dur = durationSeconds {
-                    Text("\(dur)s")
-                        .font(.caption)
-                        .foregroundColor(isMe ? .white.opacity(0.7) : Color(hex: "666666"))
+        HStack(spacing: 10) {
+            // Play/Pause circle button
+            Button {
+                if isPlaying {
+                    playerManager.pause()
+                } else {
+                    playerManager.play(filePath: filePath, messageId: messageId)
+                }
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(accentColor)
+                        .frame(width: 40, height: 40)
+                    if isThisDownloading {
+                        ProgressView()
+                            .tint(isMe ? primaryColor : .white)
+                            .scaleEffect(0.8)
+                    } else {
+                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(isMe ? primaryColor : .white)
+                            .offset(x: isPlaying ? 0 : 1.5) // optical center for play icon
+                    }
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(isMe ? Color(hex: "1B4332") : Color.white)
-            .cornerRadius(18)
+            .disabled(isThisDownloading)
+
+            // Waveform + progress
+            VStack(alignment: .leading, spacing: 6) {
+                // Waveform bars
+                GeometryReader { geo in
+                    let barCount = waveformHeights.count
+                    let spacing: CGFloat = 2
+                    let barWidth: CGFloat = max(2, (geo.size.width - CGFloat(barCount - 1) * spacing) / CGFloat(barCount))
+                    let filledBars = Int(progress * Double(barCount))
+
+                    HStack(alignment: .center, spacing: spacing) {
+                        ForEach(0..<barCount, id: \.self) { i in
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .fill(i < filledBars ? progressColor : trackColor)
+                                .frame(width: barWidth, height: waveformHeights[i])
+                        }
+                    }
+                    .frame(height: geo.size.height, alignment: .center)
+                }
+                .frame(height: 20)
+
+                // Time labels
+                HStack {
+                    Text(isPlaying ? displayTime : totalTime)
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundColor(dimColor)
+                    Spacer()
+                    if isPlaying {
+                        Text(totalTime)
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(dimColor)
+                    }
+                }
+            }
+            .frame(minWidth: 140)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(isMe ? primaryColor : Color.white)
+        .cornerRadius(18)
+        .frame(maxWidth: 260)
+    }
+
+    private func formatSeconds(_ seconds: Double) -> String {
+        let total = Int(max(0, seconds))
+        let m = total / 60
+        let s = total % 60
+        return "\(m):\(String(format: "%02d", s))"
     }
 }
 
@@ -459,15 +558,25 @@ private struct FullscreenImageView: View {
 
 class VoicePlayerManager: ObservableObject {
     @Published var playingMessageId: Int?
-    @Published var isDownloading = false
-    private var player: AVPlayer?
-    private var endObserver: Any?
+    @Published var downloadingMessageId: Int?
+    @Published var currentTime: Double = 0
+    @Published var duration: Double = 0
+
+    private var player: AVAudioPlayer?
+    private var displayLink: CADisplayLink?
     private var cachedFiles: [String: URL] = [:]
+    private var downloadTask: Task<Void, Never>?
 
     func play(filePath: String, messageId: Int) {
         // Stop current playback if different message
-        if playingMessageId != messageId {
+        if playingMessageId != nil, playingMessageId != messageId {
             cleanup()
+        }
+
+        // Resume if same message was paused
+        if playingMessageId == nil, let p = player, !p.isPlaying,
+           cachedFiles.values.contains(where: { _ in downloadingMessageId == nil }) {
+            // Fall through to cached check
         }
 
         // If already cached, play immediately
@@ -476,56 +585,91 @@ class VoicePlayerManager: ObservableObject {
             return
         }
 
+        // Cancel any in-flight download
+        downloadTask?.cancel()
+
         // Download the file first
-        isDownloading = true
-        Task { @MainActor in
+        downloadingMessageId = messageId
+        downloadTask = Task { @MainActor in
             do {
                 let data = try await APIClient.shared.downloadFileData(from: filePath)
+                guard !Task.isCancelled else { return }
                 let tempURL = FileManager.default.temporaryDirectory
                     .appendingPathComponent("voice_\(messageId).m4a")
                 try data.write(to: tempURL)
                 cachedFiles[filePath] = tempURL
-                isDownloading = false
+                downloadingMessageId = nil
                 playLocal(url: tempURL, messageId: messageId)
             } catch {
-                isDownloading = false
-                print("Voice download error: \(error)")
+                if !Task.isCancelled {
+                    downloadingMessageId = nil
+                    print("Voice download error: \(error)")
+                }
             }
         }
     }
 
     private func playLocal(url: URL, messageId: Int) {
-        let item = AVPlayerItem(url: url)
-        player = AVPlayer(playerItem: item)
-
-        try? AVAudioSession.sharedInstance().setCategory(.playback)
-        try? AVAudioSession.sharedInstance().setActive(true)
-
-        endObserver = NotificationCenter.default.addObserver(
-            forName: .AVPlayerItemDidPlayToEndTime,
-            object: item,
-            queue: .main
-        ) { [weak self] _ in
-            self?.playingMessageId = nil
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("AVAudioSession error: \(error)")
         }
 
-        player?.play()
-        playingMessageId = messageId
+        do {
+            player = try AVAudioPlayer(contentsOf: url)
+            player?.prepareToPlay()
+            duration = player?.duration ?? 0
+            player?.play()
+            playingMessageId = messageId
+            startProgressUpdates()
+        } catch {
+            print("AVAudioPlayer error: \(error)")
+            playingMessageId = nil
+        }
     }
 
     func pause() {
         player?.pause()
+        stopProgressUpdates()
         playingMessageId = nil
     }
 
-    private func cleanup() {
-        player?.pause()
-        if let obs = endObserver {
-            NotificationCenter.default.removeObserver(obs)
-            endObserver = nil
+    private func startProgressUpdates() {
+        stopProgressUpdates()
+        displayLink = CADisplayLink(target: self, selector: #selector(updateProgress))
+        displayLink?.preferredFrameRateRange = CAFrameRateRange(minimum: 10, maximum: 10)
+        displayLink?.add(to: .main, forMode: .common)
+    }
+
+    private func stopProgressUpdates() {
+        displayLink?.invalidate()
+        displayLink = nil
+    }
+
+    @objc private func updateProgress() {
+        guard let p = player else { return }
+        currentTime = p.currentTime
+        duration = p.duration
+
+        // Detect end of playback
+        if !p.isPlaying && currentTime >= duration - 0.05 {
+            stopProgressUpdates()
+            currentTime = 0
+            playingMessageId = nil
         }
+    }
+
+    private func cleanup() {
+        player?.stop()
+        stopProgressUpdates()
+        downloadTask?.cancel()
+        downloadTask = nil
         player = nil
         playingMessageId = nil
+        currentTime = 0
+        duration = 0
     }
 
     deinit {
