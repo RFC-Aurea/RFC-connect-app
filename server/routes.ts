@@ -30,6 +30,7 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   setupAuth(app);
+  const DEMO_EMAILS = ["batterywalaalifiya13@gmail.com", "alifiyab@rfcfertility.com"];
 
   // Mobile JWT auth routes
   app.post("/api/auth/login", async (req, res, next) => {
@@ -45,12 +46,20 @@ export async function registerRoutes(
         return;
       }
 
+      const isDemo = DEMO_EMAILS.includes(user.email);
+
       // If the user has already verified their phone AND Twilio is available,
       // require SMS 2FA before issuing tokens.
-      if (user.phoneVerified && user.phone && twilioEnabled) {
+      if (!isDemo && user.phoneVerified && user.phone && twilioEnabled) {
         await sendVerificationCode(user.phone);
         res.json({ requiresVerification: true, userId: user.id });
         return;
+      }
+
+      // Demo accounts skip onboarding password-change gate.
+      if (isDemo && user.mustChangePassword) {
+        await storage.updateUser(user.id, { mustChangePassword: false });
+        user.mustChangePassword = false;
       }
 
       // New users (phoneVerified = false) or dev mode: issue tokens directly.
