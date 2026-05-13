@@ -3,13 +3,24 @@ import SwiftUI
 struct OnboardingView: View {
     @EnvironmentObject var auth: AuthService
     @State private var step = 1
-    @State private var phone = ""
+    @State private var phone = "+1"
     @State private var code = ""
     @State private var newPassword = ""
     @State private var confirmPassword = ""
     @State private var isLoading = false
     @State private var errorMessage = ""
     @State private var showError = false
+
+    private var sanitizedPhone: String {
+        phone.replacingOccurrences(of: "[^+0-9]", with: "", options: .regularExpression)
+    }
+
+    private var isValidPhone: Bool {
+        let s = sanitizedPhone
+        guard s.hasPrefix("+"), s.count >= 11 else { return false }
+        let digits = s.dropFirst()
+        return digits.allSatisfy { $0.isNumber }
+    }
 
     var body: some View {
         ZStack {
@@ -62,9 +73,12 @@ struct OnboardingView: View {
                 Text("Phone Number")
                     .font(.caption.bold())
                     .foregroundColor(Color(hex: "666666"))
-                TextField("+1 (555) 000-0000", text: $phone)
+                TextField("+1", text: $phone)
                     .textFieldStyle(RFCTextFieldStyle())
                     .keyboardType(.phonePad)
+                Text("Enter with country code, e.g. +1 for US")
+                    .font(.caption)
+                    .foregroundColor(Color(hex: "666666"))
             }
 
             if showError {
@@ -74,7 +88,7 @@ struct OnboardingView: View {
             Button(action: sendCode) {
                 actionButton(label: "Send Verification Code", loading: isLoading)
             }
-            .disabled(isLoading || phone.isEmpty)
+            .disabled(isLoading || !isValidPhone)
         }
     }
 
@@ -84,7 +98,7 @@ struct OnboardingView: View {
                 Text("Verify Your Phone")
                     .font(.title.bold())
                     .foregroundColor(Color(hex: "1B4332"))
-                Text("Enter the 6-digit code sent to \(phone).")
+                Text("Enter the 6-digit code sent to \(sanitizedPhone).")
                     .font(.subheadline)
                     .foregroundColor(Color(hex: "666666"))
             }
@@ -172,7 +186,7 @@ struct OnboardingView: View {
         showError = false
         Task {
             do {
-                try await APIClient.shared.sendVerification(phone: phone)
+                try await APIClient.shared.sendVerification(phone: sanitizedPhone)
                 step = 2
             } catch {
                 errorMessage = error.localizedDescription
@@ -187,7 +201,7 @@ struct OnboardingView: View {
         showError = false
         Task {
             do {
-                try await APIClient.shared.verifyPhone(phone: phone, code: code)
+                try await APIClient.shared.verifyPhone(phone: sanitizedPhone, code: code)
                 step = 3
             } catch {
                 errorMessage = error.localizedDescription

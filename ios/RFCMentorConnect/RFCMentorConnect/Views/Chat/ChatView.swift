@@ -1,6 +1,13 @@
 import SwiftUI
 import AVFoundation
 
+final class ImageCache {
+    static let shared = ImageCache()
+    private let cache = NSCache<NSString, UIImage>()
+    func get(_ key: String) -> UIImage? { cache.object(forKey: key as NSString) }
+    func set(_ key: String, _ image: UIImage) { cache.setObject(image, forKey: key as NSString) }
+}
+
 struct ChatView: View {
     @EnvironmentObject var auth: AuthService
     @ObservedObject var socketService = SocketService.shared
@@ -361,10 +368,18 @@ private struct PhotoBubble: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .onTapGesture(perform: onTap)
         .task {
+            if let cached = ImageCache.shared.get(filePath) {
+                image = cached
+                return
+            }
             do {
                 let data = try await APIClient.shared.downloadFileData(from: filePath)
-                image = UIImage(data: data)
-                if image == nil { failed = true }
+                if let downloaded = UIImage(data: data) {
+                    ImageCache.shared.set(filePath, downloaded)
+                    image = downloaded
+                } else {
+                    failed = true
+                }
             } catch {
                 failed = true
             }
