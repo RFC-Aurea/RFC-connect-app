@@ -176,6 +176,10 @@ final class APIClient {
         _ = try await requestWithRetry("/api/admin/patients/\(patientId)/phase", method: "PATCH", body: ["phase": phase])
     }
 
+    func deleteUser(userId: Int) async throws {
+        _ = try await requestWithRetry("/api/admin/users/\(userId)", method: "DELETE")
+    }
+
     // MARK: - Patient
 
     struct PatientDashboard: Codable {

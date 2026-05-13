@@ -504,6 +504,10 @@ export async function registerRoutes(
     try {
       const { mentorId, patientId } = req.body;
       if (!mentorId || !patientId) return res.status(400).json({ message: "mentorId and patientId are required" });
+      const existing = await storage.getAssignmentsByPatient(patientId);
+      for (const a of existing) {
+        await storage.deleteAssignment(a.id);
+      }
       const assignment = await storage.createAssignment({
         mentorId,
         patientId,

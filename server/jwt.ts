@@ -12,7 +12,7 @@ export interface JwtPayload {
 }
 
 export function generateAccessToken(userId: number): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "15m" });
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "30d" });
 }
 
 export function generateRefreshToken(userId: number): string {

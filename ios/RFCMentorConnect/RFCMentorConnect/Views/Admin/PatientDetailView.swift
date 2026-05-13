@@ -12,6 +12,7 @@ struct PatientDetailView: View {
     @State private var showSuccess = false
     @State private var errorMessage = ""
     @State private var showError = false
+    @State private var showDeleteConfirm = false
 
     private let phases = [
         "Trying to Conceive", "Fertility Testing", "IUI Treatment",
@@ -130,6 +131,17 @@ struct PatientDetailView: View {
                         if showError {
                             Text(errorMessage).font(.caption).foregroundColor(.red).padding(.horizontal, 16)
                         }
+
+                        Button(action: { showDeleteConfirm = true }) {
+                            Text("Deactivate Account")
+                                .font(.subheadline.bold())
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
+                                .background(Color.red)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                        }
+                        .padding(.horizontal, 16)
                     }
                     .padding(.bottom, 24)
                 }
@@ -146,6 +158,12 @@ struct PatientDetailView: View {
                 Button("OK") {}
             } message: {
                 Text(successMessage)
+            }
+            .alert("Deactivate Account", isPresented: $showDeleteConfirm) {
+                Button("Deactivate", role: .destructive) { deleteAccount() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to deactivate \(patient.name)'s account? This cannot be undone.")
             }
         }
     }
@@ -193,6 +211,18 @@ struct PatientDetailView: View {
                 showError = true
             }
             isLoading = false
+        }
+    }
+
+    private func deleteAccount() {
+        Task {
+            do {
+                try await APIClient.shared.deleteUser(userId: patient.id)
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
         }
     }
 }

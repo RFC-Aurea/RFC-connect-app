@@ -9,6 +9,9 @@ struct AdminDashboardView: View {
     @State private var selectedPatient: PatientSummary?
     @State private var selectedMentor: MentorSummary?
     @State private var errorMessage = ""
+    @State private var showDeleteAlert = false
+    @State private var pendingDeleteId: Int?
+    @State private var pendingDeleteName: String = ""
 
     var unassignedPatients: [PatientSummary] {
         overview?.patients.filter { $0.mentorId == nil } ?? []
@@ -134,6 +137,14 @@ struct AdminDashboardView: View {
                 MentorDetailView(mentor: mentor, overview: overview)
             }
             .task { await loadData() }
+            .alert("Delete User", isPresented: $showDeleteAlert) {
+                Button("Delete", role: .destructive) {
+                    if let id = pendingDeleteId { deleteUser(userId: id) }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Are you sure you want to delete \(pendingDeleteName)? This cannot be undone.")
+            }
         }
     }
 
@@ -145,6 +156,17 @@ struct AdminDashboardView: View {
             errorMessage = error.localizedDescription
         }
         isLoading = false
+    }
+
+    private func deleteUser(userId: Int) {
+        Task {
+            do {
+                try await APIClient.shared.deleteUser(userId: userId)
+                await loadData()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     // MARK: - Section Card
@@ -211,6 +233,15 @@ struct AdminDashboardView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+        .contextMenu {
+            Button(role: .destructive) {
+                pendingDeleteId = patient.id
+                pendingDeleteName = patient.name
+                showDeleteAlert = true
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 
     // MARK: - Mentor Row
@@ -244,6 +275,15 @@ struct AdminDashboardView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
+        .contextMenu {
+            Button(role: .destructive) {
+                pendingDeleteId = mentor.id
+                pendingDeleteName = mentor.name
+                showDeleteAlert = true
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 
     // MARK: - Admin Row
