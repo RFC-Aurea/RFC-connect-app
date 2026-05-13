@@ -290,7 +290,7 @@ final class APIClient {
         let type: String
     }
 
-    func uploadFile(data fileData: Data, fileName: String, mimeType: String, type: String) async throws -> UploadResponse {
+    func uploadFile(data fileData: Data, fileName: String, mimeType: String, type: String, durationSeconds: Int? = nil) async throws -> UploadResponse {
         guard let url = URL(string: baseURL + "/api/upload") else { throw APIError.invalidURL }
         let boundary = UUID().uuidString
         var req = URLRequest(url: url)
@@ -303,6 +303,11 @@ final class APIClient {
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"type\"\r\n\r\n".data(using: .utf8)!)
         body.append("\(type)\r\n".data(using: .utf8)!)
+        if type == "voice", let durationSeconds {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"duration\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(durationSeconds)\r\n".data(using: .utf8)!)
+        }
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
         body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)

@@ -33,6 +33,7 @@ struct ChatView: View {
         let fileName: String
         let mimeType: String
         let type: String
+        let durationSeconds: Int?
     }
 
     var body: some View {
@@ -55,7 +56,7 @@ struct ChatView: View {
             .alert("Upload Failed", isPresented: $showUploadErrorAlert) {
                 Button("Retry") {
                     if let pending = pendingUpload {
-                        Task { await uploadAndSend(data: pending.data, fileName: pending.fileName, mimeType: pending.mimeType, type: pending.type) }
+                        Task { await uploadAndSend(data: pending.data, fileName: pending.fileName, mimeType: pending.mimeType, type: pending.type, durationSeconds: pending.durationSeconds) }
                     }
                 }
                 Button("Cancel", role: .cancel) { pendingUpload = nil }
@@ -126,7 +127,12 @@ struct ChatView: View {
             VoiceRecorderView { url in
                 Task {
                     guard let data = try? Data(contentsOf: url) else { return }
-                    await uploadAndSend(data: data, fileName: url.lastPathComponent, mimeType: "audio/mp4", type: "voice")
+                    let duration: Int? = {
+                        guard let player = try? AVAudioPlayer(contentsOf: url) else { return nil }
+                        let seconds = Int(player.duration.rounded())
+                        return seconds > 0 ? seconds : nil
+                    }()
+                    await uploadAndSend(data: data, fileName: url.lastPathComponent, mimeType: "audio/mp4", type: "voice", durationSeconds: duration)
                 }
             }
         }
@@ -290,14 +296,14 @@ struct ChatView: View {
         }
     }
 
-    private func uploadAndSend(data: Data, fileName: String, mimeType: String, type: String) async {
+    private func uploadAndSend(data: Data, fileName: String, mimeType: String, type: String, durationSeconds: Int? = nil) async {
         do {
-            let attachment = try await APIClient.shared.uploadFile(data: data, fileName: fileName, mimeType: mimeType, type: type)
+            let attachment = try await APIClient.shared.uploadFile(data: data, fileName: fileName, mimeType: mimeType, type: type, durationSeconds: durationSeconds)
             let msg = try await APIClient.shared.sendMessage(to: partnerId, content: attachment.url, messageType: type, attachmentId: attachment.attachmentId)
             messages.append(msg)
             pendingUpload = nil
         } catch {
-            pendingUpload = PendingUpload(data: data, fileName: fileName, mimeType: mimeType, type: type)
+            pendingUpload = PendingUpload(data: data, fileName: fileName, mimeType: mimeType, type: type, durationSeconds: durationSeconds)
             uploadErrorMessage = "Couldn't send \(type): \(error.localizedDescription)"
             showUploadErrorAlert = true
         }
@@ -623,6 +629,7 @@ private struct FullscreenImageView: View {
 
 class VoicePlayerManager: ObservableObject {
     @Published var playingMessageId: Int?
+    @Published var pausedMessageId: Int?
     @Published var downloadingMessageId: Int?
     @Published var currentTime: Double = 0
     @Published var duration: Double = 0
@@ -633,15 +640,18 @@ class VoicePlayerManager: ObservableObject {
     private var downloadTask: Task<Void, Never>?
 
     func play(filePath: String, messageId: Int) {
+        // Resume if this message was paused — pick up where we left off
+        if pausedMessageId == messageId, let p = player, !p.isPlaying {
+            p.play()
+            playingMessageId = messageId
+            pausedMessageId = nil
+            startProgressUpdates()
+            return
+        }
+
         // Stop current playback if different message
         if playingMessageId != nil, playingMessageId != messageId {
             cleanup()
-        }
-
-        // Resume if same message was paused
-        if playingMessageId == nil, let p = player, !p.isPlaying,
-           cachedFiles.values.contains(where: { _ in downloadingMessageId == nil }) {
-            // Fall through to cached check
         }
 
         // If already cached, play immediately
@@ -688,6 +698,7 @@ class VoicePlayerManager: ObservableObject {
             duration = player?.duration ?? 0
             player?.play()
             playingMessageId = messageId
+            pausedMessageId = nil
             startProgressUpdates()
         } catch {
             print("AVAudioPlayer error: \(error)")
@@ -696,9 +707,10 @@ class VoicePlayerManager: ObservableObject {
     }
 
     func pause() {
+        pausedMessageId = playingMessageId
+        playingMessageId = nil
         player?.pause()
         stopProgressUpdates()
-        playingMessageId = nil
     }
 
     private func startProgressUpdates() {
@@ -733,6 +745,7 @@ class VoicePlayerManager: ObservableObject {
         downloadTask = nil
         player = nil
         playingMessageId = nil
+        pausedMessageId = nil
         currentTime = 0
         duration = 0
     }
