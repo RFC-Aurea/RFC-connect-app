@@ -2,7 +2,18 @@ import { Server } from "socket.io";
 import type { Server as HttpServer } from "http";
 import { storage } from "./storage";
 import { verifyAccessToken } from "./jwt";
+import { sendPushNotification } from "./apns";
 import type { User, Message } from "@shared/schema";
+
+function previewForMessage(content: string, messageType: string): string {
+  switch (messageType) {
+    case "voice": return "Sent a voice message";
+    case "photo": return "Sent a photo";
+    case "document": return "Sent a document";
+    default:
+      return content.length > 100 ? content.slice(0, 100) : content;
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Typed Socket.IO event maps
@@ -185,6 +196,19 @@ export function initializeSocket(httpServer: HttpServer): void {
           message,
           sender: safeSender,
         });
+
+        const recipient = await storage.getUser(partnerId);
+        if (recipient?.apnsDeviceToken) {
+          sendPushNotification(recipient.apnsDeviceToken, {
+            title: user.name,
+            body: previewForMessage(message.content, message.messageType),
+            data: {
+              messageId: message.id,
+              senderId: user.id,
+              assignmentId: assignment.id,
+            },
+          }).catch(err => console.error("[apns] push failed:", err));
+        }
       } catch (err) {
         console.error("[socket] message:send error:", err);
       }

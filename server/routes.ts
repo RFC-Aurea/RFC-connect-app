@@ -26,7 +26,18 @@ import {
   type AttachmentType,
 } from "./upload";
 import { getIO } from "./socket";
+import { sendPushNotification } from "./apns";
 import { TREATMENT_PHASES } from "../shared/schema";
+
+function previewForMessage(content: string, messageType: string): string {
+  switch (messageType) {
+    case "voice": return "Sent a voice message";
+    case "photo": return "Sent a photo";
+    case "document": return "Sent a document";
+    default:
+      return content.length > 100 ? content.slice(0, 100) : content;
+  }
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -315,6 +326,18 @@ export async function registerRoutes(
     } catch (err) { next(err); }
   });
 
+  app.post("/api/auth/device-token", requireAuth, async (req, res, next) => {
+    try {
+      const { deviceToken } = req.body;
+      if (!deviceToken || typeof deviceToken !== "string") {
+        res.status(400).json({ message: "deviceToken is required" });
+        return;
+      }
+      await storage.updateUser(req.user!.id, { apnsDeviceToken: deviceToken });
+      res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
   app.post("/api/auth/forgot-password", forgotPasswordLimiter, async (req, res, next) => {
     try {
       const { email } = req.body;
@@ -456,6 +479,24 @@ export async function registerRoutes(
   app.get("/api/users/:id", requireAuth, async (req, res, next) => {
     try {
       const id = parseInt(req.params.id as string);
+      const requester = req.user!;
+
+      if (requester.role !== "admin" && requester.id !== id) {
+        if (requester.role === "patient") {
+          const assignments = await storage.getAssignmentsByPatient(requester.id);
+          if (!assignments.some(a => a.mentorId === id)) {
+            return res.status(403).json({ message: "Access denied" });
+          }
+        } else if (requester.role === "mentor") {
+          const assignments = await storage.getAssignmentsByMentor(requester.id);
+          if (!assignments.some(a => a.patientId === id)) {
+            return res.status(403).json({ message: "Access denied" });
+          }
+        } else {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+
       const user = await storage.getUser(id);
       if (!user) return res.status(404).json({ message: "User not found" });
       const { password, ...safeUser } = user;
@@ -679,17 +720,26 @@ export async function registerRoutes(
       // (and any other devices the sender is signed in on) gets the message
       // in real time, matching the shape used by the socket message:send handler.
       const io = getIO();
-      if (io) {
-        // requireAuth stores the full user from storage on req.user — Express.User
-        // is narrower than the schema User, so refetch to match the socket payload shape.
-        const sender = await storage.getUser(userId);
-        if (sender) {
-          const { password: _pw, ...safeSender } = sender;
-          io.to(`assignment:${assignment.id}`).emit("message:received", {
-            message,
-            sender: safeSender,
-          });
-        }
+      const sender = await storage.getUser(userId);
+      if (io && sender) {
+        const { password: _pw, ...safeSender } = sender;
+        io.to(`assignment:${assignment.id}`).emit("message:received", {
+          message,
+          sender: safeSender,
+        });
+      }
+
+      const recipient = await storage.getUser(partnerId);
+      if (recipient?.apnsDeviceToken && sender) {
+        sendPushNotification(recipient.apnsDeviceToken, {
+          title: sender.name,
+          body: previewForMessage(message.content, message.messageType),
+          data: {
+            messageId: message.id,
+            senderId: userId,
+            assignmentId: assignment.id,
+          },
+        }).catch(err => console.error("[apns] push failed:", err));
       }
 
       return res.status(201).json(message);

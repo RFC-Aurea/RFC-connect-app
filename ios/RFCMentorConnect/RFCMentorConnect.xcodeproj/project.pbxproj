@@ -31,6 +31,7 @@
 		AA000022 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100022 /* SettingsView.swift */; };
 		AA000023 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA100023 /* Assets.xcassets */; };
 		AA000030 /* MentorResourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100030 /* MentorResourcesView.swift */; };
+		AA000031 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100031 /* PushNotificationService.swift */; };
 		F8E1C01D2F6DCEA90063E454 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = AAPKG0001 /* SocketIO */; };
 /* End PBXBuildFile section */
 
@@ -59,6 +60,7 @@
 		AA100022 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		AA100023 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA100030 /* MentorResourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MentorResourcesView.swift; sourceTree = "<group>"; };
+		AA100031 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
 		AAPROD001 /* RFCMentorConnect.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RFCMentorConnect.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -101,6 +103,7 @@
 				AA100003 /* APIClient.swift */,
 				AA100004 /* AuthService.swift */,
 				AA100005 /* SocketService.swift */,
+				AA100031 /* PushNotificationService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -281,6 +284,7 @@
 				AA000003 /* APIClient.swift in Sources */,
 				AA000004 /* AuthService.swift in Sources */,
 				AA000005 /* SocketService.swift in Sources */,
+				AA000031 /* PushNotificationService.swift in Sources */,
 				AA000006 /* User.swift in Sources */,
 				AA000007 /* Message.swift in Sources */,
 				AA000008 /* Resource.swift in Sources */,

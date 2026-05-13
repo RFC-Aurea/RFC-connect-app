@@ -177,6 +177,10 @@ final class APIClient {
         return try decode(User.self, from: data)
     }
 
+    func registerDeviceToken(token: String) async throws {
+        _ = try await requestWithRetry("/api/auth/device-token", method: "POST", body: ["deviceToken": token])
+    }
+
     // MARK: - Admin
 
     func getAdminOverview() async throws -> AdminOverview {

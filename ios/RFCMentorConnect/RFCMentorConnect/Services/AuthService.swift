@@ -50,6 +50,7 @@ final class AuthService: ObservableObject {
             currentUser = response.user
             isAuthenticated = true
             requiresOnboarding = response.user?.mustChangePassword ?? false
+            PushNotificationService.shared.sendTokenToServerIfPossible()
         }
         return response
     }
@@ -62,6 +63,7 @@ final class AuthService: ObservableObject {
             currentUser = response.user
             isAuthenticated = true
             requiresOnboarding = response.user?.mustChangePassword ?? false
+            PushNotificationService.shared.sendTokenToServerIfPossible()
         }
         return response
     }
