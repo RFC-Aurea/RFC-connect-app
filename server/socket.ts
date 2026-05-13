@@ -68,8 +68,22 @@ export function isUserOnline(userId: number): boolean {
 // Socket.IO initialisation
 // ---------------------------------------------------------------------------
 
+type AppIO = Server<
+  ClientToServerEvents,
+  ServerToClientEvents,
+  InterServerEvents,
+  SocketData
+>;
+
+let ioInstance: AppIO | undefined;
+
+/** Returns the active Socket.IO server, or undefined if not yet initialised. */
+export function getIO(): AppIO | undefined {
+  return ioInstance;
+}
+
 export function initializeSocket(httpServer: HttpServer): void {
-  const io = new Server<
+  const io: AppIO = new Server<
     ClientToServerEvents,
     ServerToClientEvents,
     InterServerEvents,
@@ -86,6 +100,8 @@ export function initializeSocket(httpServer: HttpServer): void {
       methods: ["GET", "POST"],
     },
   });
+
+  ioInstance = io;
 
   // ------------------------------------------------------------------
   // Connection authentication middleware

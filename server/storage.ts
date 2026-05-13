@@ -48,6 +48,7 @@ export interface IStorage {
   createRefreshToken(data: InsertRefreshToken): Promise<RefreshToken>;
   getRefreshTokenByHash(hash: string): Promise<RefreshToken | undefined>;
   deleteRefreshTokenByHash(hash: string): Promise<void>;
+  deleteRefreshTokensByUserId(userId: number): Promise<void>;
 
   createAuditLog(entry: InsertAuditLog): Promise<AuditLog>;
   getAuditLogs(limit?: number): Promise<AuditLog[]>;
@@ -181,6 +182,10 @@ export class DatabaseStorage implements IStorage {
 
   async deleteRefreshTokenByHash(hash: string): Promise<void> {
     await db.delete(refreshTokens).where(eq(refreshTokens.tokenHash, hash));
+  }
+
+  async deleteRefreshTokensByUserId(userId: number): Promise<void> {
+    await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {

@@ -18,12 +18,53 @@ struct ChatView: View {
     @State private var showVoiceRecorder = false
     @State private var reportedMessageId: Int?
     @State private var showReportAlert = false
+    @State private var reportReason = ""
     @State private var scrollProxy: ScrollViewProxy?
     @State private var typingDebounce: Task<Void, Never>?
     @State private var fullscreenImageURL: String?
+    @State private var sendError: String?
+    @State private var showUploadErrorAlert = false
+    @State private var uploadErrorMessage = ""
+    @State private var pendingUpload: PendingUpload?
     @StateObject private var voicePlayerManager = VoicePlayerManager()
 
+    private struct PendingUpload {
+        let data: Data
+        let fileName: String
+        let mimeType: String
+        let type: String
+    }
+
     var body: some View {
+        mainContent
+            .alert("Report Message", isPresented: $showReportAlert) {
+                TextField("Reason for reporting", text: $reportReason)
+                Button("Report", role: .destructive) {
+                    let trimmed = reportReason.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard let id = reportedMessageId, !trimmed.isEmpty else {
+                        reportReason = ""
+                        return
+                    }
+                    reportReason = ""
+                    Task { try? await APIClient.shared.reportMessage(messageId: id, reason: trimmed) }
+                }
+                Button("Cancel", role: .cancel) { reportReason = "" }
+            } message: {
+                Text("Tell us why you're reporting this message. The RFC team will review it.")
+            }
+            .alert("Upload Failed", isPresented: $showUploadErrorAlert) {
+                Button("Retry") {
+                    if let pending = pendingUpload {
+                        Task { await uploadAndSend(data: pending.data, fileName: pending.fileName, mimeType: pending.mimeType, type: pending.type) }
+                    }
+                }
+                Button("Cancel", role: .cancel) { pendingUpload = nil }
+            } message: {
+                Text(uploadErrorMessage)
+            }
+    }
+
+    private var mainContent: some View {
         VStack(spacing: 0) {
             // Medical disclaimer banner
             disclaimerBanner
@@ -94,16 +135,6 @@ struct ChatView: View {
             Button("Document") { showDocumentPicker = true }
             Button("Voice Message") { showVoiceRecorder = true }
             Button("Cancel", role: .cancel) {}
-        }
-        .alert("Report Message", isPresented: $showReportAlert) {
-            Button("Report", role: .destructive) {
-                if let id = reportedMessageId {
-                    Task { try? await APIClient.shared.reportMessage(messageId: id) }
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This message will be reviewed by the RFC team.")
         }
         .overlay {
             if let filePath = fullscreenImageURL {
@@ -190,51 +221,71 @@ struct ChatView: View {
     }
 
     private var inputBar: some View {
-        HStack(spacing: 10) {
-            Button(action: { showAttachmentSheet = true }) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(Color(hex: "1B4332"))
+        VStack(spacing: 0) {
+            if let sendError {
+                Text(sendError)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.red.opacity(0.1))
             }
 
-            TextField("Message...", text: $messageText, axis: .vertical)
-                .lineLimit(1...4)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color.white)
-                .cornerRadius(20)
-                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.gray.opacity(0.2)))
-                .onChange(of: messageText) { _ in
-                    socketService.startTyping(to: partnerId)
-                    typingDebounce?.cancel()
-                    typingDebounce = Task {
-                        try? await Task.sleep(nanoseconds: 2_000_000_000)
-                        socketService.stopTyping(to: partnerId)
-                    }
+            HStack(spacing: 10) {
+                Button(action: { showAttachmentSheet = true }) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(Color(hex: "1B4332"))
                 }
 
-            Button(action: sendMessage) {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.title2)
-                    .foregroundColor(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : Color(hex: "1B4332"))
+                TextField("Message...", text: $messageText, axis: .vertical)
+                    .lineLimit(1...4)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color.white)
+                    .cornerRadius(20)
+                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.gray.opacity(0.2)))
+                    .onChange(of: messageText) { _ in
+                        if sendError != nil { sendError = nil }
+                        socketService.startTyping(to: partnerId)
+                        typingDebounce?.cancel()
+                        typingDebounce = Task {
+                            try? await Task.sleep(nanoseconds: 2_000_000_000)
+                            socketService.stopTyping(to: partnerId)
+                        }
+                    }
+
+                Button(action: sendMessage) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : Color(hex: "1B4332"))
+                }
+                .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending)
             }
-            .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color(hex: "F5F5F0"))
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(Color(hex: "F5F5F0"))
     }
 
     private func sendMessage() {
-        let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        let trimmed = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        let originalText = messageText
         messageText = ""
+        sendError = nil
         isSending = true
         Task {
             do {
-                let msg = try await APIClient.shared.sendMessage(to: partnerId, content: text)
+                let msg = try await APIClient.shared.sendMessage(to: partnerId, content: trimmed)
                 messages.append(msg)
-            } catch { print("Chat error: \(error)") }
+            } catch {
+                // Restore the user's draft so they don't lose what they typed.
+                // Only restore if they haven't started typing something else.
+                if messageText.isEmpty { messageText = originalText }
+                sendError = "Couldn't send message: \(error.localizedDescription)"
+            }
             isSending = false
         }
     }
@@ -244,8 +295,11 @@ struct ChatView: View {
             let attachment = try await APIClient.shared.uploadFile(data: data, fileName: fileName, mimeType: mimeType, type: type)
             let msg = try await APIClient.shared.sendMessage(to: partnerId, content: attachment.url, messageType: type, attachmentId: attachment.attachmentId)
             messages.append(msg)
+            pendingUpload = nil
         } catch {
-            print("Upload/send error: \(error)")
+            pendingUpload = PendingUpload(data: data, fileName: fileName, mimeType: mimeType, type: type)
+            uploadErrorMessage = "Couldn't send \(type): \(error.localizedDescription)"
+            showUploadErrorAlert = true
         }
     }
 
@@ -461,6 +515,8 @@ private struct DocumentBubble: View {
 
     @State private var isDownloading = false
     @State private var localURL: URL?
+    @State private var downloadErrorMessage = ""
+    @State private var showDownloadErrorAlert = false
 
     private var displayName: String {
         if let name = fileName, !name.isEmpty { return name }
@@ -494,6 +550,12 @@ private struct DocumentBubble: View {
             .cornerRadius(18)
         }
         .disabled(isDownloading)
+        .alert("Download Failed", isPresented: $showDownloadErrorAlert) {
+            Button("Retry") { downloadAndOpen() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(downloadErrorMessage)
+        }
     }
 
     private func downloadAndOpen() {
@@ -511,8 +573,11 @@ private struct DocumentBubble: View {
                     isDownloading = false
                 }
             } catch {
-                await MainActor.run { isDownloading = false }
-                print("Document download error: \(error)")
+                await MainActor.run {
+                    isDownloading = false
+                    downloadErrorMessage = "Couldn't open this document: \(error.localizedDescription)"
+                    showDownloadErrorAlert = true
+                }
             }
         }
     }

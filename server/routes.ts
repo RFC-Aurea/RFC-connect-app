@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { randomBytes } from "crypto";
+import rateLimit from "express-rate-limit";
 import { storage } from "./storage";
 import { setupAuth, requireAuth, requireRole, comparePasswords, hashPassword } from "./auth";
 import {
@@ -24,6 +25,7 @@ import {
   maxSizeForType,
   type AttachmentType,
 } from "./upload";
+import { getIO } from "./socket";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -32,8 +34,38 @@ export async function registerRoutes(
   setupAuth(app);
   const DEMO_EMAILS = ["batterywalaalifiya13@gmail.com", "alifiyab@rfcfertility.com"];
 
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (_req, res) => {
+      res.status(429).json({ message: "Too many attempts, please try again later" });
+    },
+  });
+
+  const forgotPasswordLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 3,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (_req, res) => {
+      res.status(429).json({ message: "Too many attempts, please try again later" });
+    },
+  });
+
+  const verificationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 3,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (_req, res) => {
+      res.status(429).json({ message: "Too many attempts, please try again later" });
+    },
+  });
+
   // Mobile JWT auth routes
-  app.post("/api/auth/login", async (req, res, next) => {
+  app.post("/api/auth/login", loginLimiter, async (req, res, next) => {
     try {
       const { email, password } = req.body;
       if (!email || !password) {
@@ -43,6 +75,11 @@ export async function registerRoutes(
       const user = await storage.getUserByEmail(email);
       if (!user || !(await comparePasswords(password, user.password))) {
         res.status(401).json({ message: "Invalid email or password" });
+        return;
+      }
+
+      if (user.status === "inactive") {
+        res.status(403).json({ message: "Account is deactivated" });
         return;
       }
 
@@ -166,7 +203,7 @@ export async function registerRoutes(
   // E.164 phone: starts with +, followed by 10–15 digits
   const PHONE_RE = /^\+\d{10,15}$/;
 
-  app.post("/api/auth/send-verification", requireAuth, async (req, res, next) => {
+  app.post("/api/auth/send-verification", verificationLimiter, requireAuth, async (req, res, next) => {
     try {
       const { phone } = req.body;
       if (!phone || !PHONE_RE.test(phone)) {
@@ -260,7 +297,7 @@ export async function registerRoutes(
     } catch (err) { next(err); }
   });
 
-  app.post("/api/auth/forgot-password", async (req, res, next) => {
+  app.post("/api/auth/forgot-password", forgotPasswordLimiter, async (req, res, next) => {
     try {
       const { email } = req.body;
       if (!email) {
@@ -371,7 +408,11 @@ export async function registerRoutes(
       }
 
       // Verify the requesting user is sender/receiver of the linked message, or is admin
-      if (req.user!.role !== "admin" && attachment.messageId) {
+      if (req.user!.role !== "admin") {
+        if (!attachment.messageId) {
+          res.status(403).json({ message: "Access denied" });
+          return;
+        }
         const msg = await storage.getMessage(attachment.messageId);
         if (msg && msg.senderId !== req.user!.id && msg.receiverId !== req.user!.id) {
           res.status(403).json({ message: "Access denied" });
@@ -504,6 +545,20 @@ export async function registerRoutes(
     try {
       const { mentorId, patientId } = req.body;
       if (!mentorId || !patientId) return res.status(400).json({ message: "mentorId and patientId are required" });
+
+      const [mentor, patient] = await Promise.all([
+        storage.getUser(Number(mentorId)),
+        storage.getUser(Number(patientId)),
+      ]);
+
+      if (!mentor) return res.status(400).json({ message: "mentorId does not refer to an existing user" });
+      if (mentor.role !== "mentor") return res.status(400).json({ message: "mentorId must reference a user with role 'mentor'" });
+      if (mentor.status !== "active") return res.status(400).json({ message: "Mentor account is not active" });
+
+      if (!patient) return res.status(400).json({ message: "patientId does not refer to an existing user" });
+      if (patient.role !== "patient") return res.status(400).json({ message: "patientId must reference a user with role 'patient'" });
+      if (patient.status !== "active") return res.status(400).json({ message: "Patient account is not active" });
+
       const existing = await storage.getAssignmentsByPatient(patientId);
       for (const a of existing) {
         await storage.deleteAssignment(a.id);
@@ -579,10 +634,10 @@ export async function registerRoutes(
         ? await storage.getAssignmentsByPatient(userId)
         : await storage.getAssignmentsByMentor(userId);
 
-      const isAssigned = assignments.some(
+      const assignment = assignments.find(
         a => a.mentorId === partnerId || a.patientId === partnerId
       );
-      if (!isAssigned) return res.status(403).json({ message: "Not assigned to this user" });
+      if (!assignment) return res.status(403).json({ message: "Not assigned to this user" });
 
       const message = await storage.createMessage({
         senderId: userId,
@@ -594,6 +649,23 @@ export async function registerRoutes(
       // Link the pre-uploaded attachment to this message
       if (attachmentId) {
         await storage.linkAttachmentToMessage(Number(attachmentId), message.id);
+      }
+
+      // Broadcast to all sockets in the assignment room so the recipient
+      // (and any other devices the sender is signed in on) gets the message
+      // in real time, matching the shape used by the socket message:send handler.
+      const io = getIO();
+      if (io) {
+        // requireAuth stores the full user from storage on req.user — Express.User
+        // is narrower than the schema User, so refetch to match the socket payload shape.
+        const sender = await storage.getUser(userId);
+        if (sender) {
+          const { password: _pw, ...safeSender } = sender;
+          io.to(`assignment:${assignment.id}`).emit("message:received", {
+            message,
+            sender: safeSender,
+          });
+        }
       }
 
       return res.status(201).json(message);
@@ -746,6 +818,9 @@ export async function registerRoutes(
 
       // Remove all mentor assignments involving this user before deactivating
       await storage.deleteAssignmentsByUserId(targetId);
+
+      // Revoke all refresh tokens so the user can't continue using existing sessions
+      await storage.deleteRefreshTokensByUserId(targetId);
 
       await storage.updateUser(targetId, { status: "inactive" });
 

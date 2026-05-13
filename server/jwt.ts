@@ -12,7 +12,7 @@ export interface JwtPayload {
 }
 
 export function generateAccessToken(userId: number): string {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "30d" });
+  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "1h" });
 }
 
 export function generateRefreshToken(userId: number): string {
@@ -48,6 +48,7 @@ export async function resolveAuthUser(req: Request): Promise<AuthResult> {
       const payload = verifyAccessToken(token);
       const user = await storage.getUser(payload.userId);
       if (!user) return { ok: false, status: 401, message: "Not authenticated" };
+      if (user.status === "inactive") return { ok: false, status: 401, message: "Account is deactivated" };
       return { ok: true, user };
     } catch {
       return { ok: false, status: 401, message: "Invalid or expired token" };

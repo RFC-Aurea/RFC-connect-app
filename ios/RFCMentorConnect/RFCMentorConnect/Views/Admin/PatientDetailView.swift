@@ -15,15 +15,15 @@ struct PatientDetailView: View {
     @State private var showDeleteConfirm = false
 
     private let phases = [
-        "Trying to Conceive", "Fertility Testing", "IUI Treatment",
-        "IVF Treatment", "Egg Freezing", "Donor/Surrogacy",
-        "Pregnancy After Infertility", "Parenting After Infertility"
+        "Pre-Consult & Decision", "Testing & Diagnosis", "Stimulation",
+        "Retrieval & Fertilization", "Transfer Prep", "Two Week Wait",
+        "Early Pregnancy", "Postpartum/Graduation"
     ]
 
     init(patient: PatientSummary, overview: AdminOverview?) {
         self.patient = patient
         self.overview = overview
-        _selectedPhase = State(initialValue: patient.phase ?? "Trying to Conceive")
+        _selectedPhase = State(initialValue: patient.phase ?? "Pre-Consult & Decision")
         _selectedMentorId = State(initialValue: patient.mentorId)
     }
 

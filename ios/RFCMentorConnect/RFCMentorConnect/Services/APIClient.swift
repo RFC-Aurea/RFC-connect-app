@@ -120,9 +120,13 @@ final class APIClient {
         req.httpBody = try JSONSerialization.data(withJSONObject: ["refreshToken": refresh])
         let (data, response) = try await session.data(for: req)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { return false }
-        struct RefreshResp: Codable { let accessToken: String }
+        struct RefreshResp: Codable {
+            let accessToken: String
+            let refreshToken: String
+        }
         if let resp = try? decoder.decode(RefreshResp.self, from: data) {
             KeychainHelper.shared.save(resp.accessToken, for: "accessToken")
+            KeychainHelper.shared.save(resp.refreshToken, for: "refreshToken")
             return true
         }
         return false
@@ -173,7 +177,7 @@ final class APIClient {
     }
 
     func updatePhase(patientId: Int, phase: String) async throws {
-        _ = try await requestWithRetry("/api/admin/patients/\(patientId)/phase", method: "PATCH", body: ["phase": phase])
+        _ = try await requestWithRetry("/api/patients/\(patientId)/phase", method: "PATCH", body: ["phase": phase])
     }
 
     func deleteUser(userId: Int) async throws {
@@ -216,8 +220,8 @@ final class APIClient {
         return try decode(Message.self, from: data)
     }
 
-    func reportMessage(messageId: Int) async throws {
-        _ = try await requestWithRetry("/api/messages/\(messageId)/report", method: "POST")
+    func reportMessage(messageId: Int, reason: String) async throws {
+        _ = try await requestWithRetry("/api/reports", method: "POST", body: ["messageId": messageId, "reason": reason])
     }
 
     // MARK: - Resources
