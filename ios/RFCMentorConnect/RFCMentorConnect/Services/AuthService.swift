@@ -11,6 +11,13 @@ final class AuthService: ObservableObject {
     @Published var requiresOnboarding = false
 
     private init() {
+        NotificationCenter.default.addObserver(
+            forName: .authSessionExpired,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.logout() }
+        }
         Task { await checkAuthState() }
     }
 
@@ -60,6 +67,9 @@ final class AuthService: ObservableObject {
     }
 
     func logout() {
+        if let refresh = KeychainHelper.shared.read(for: "refreshToken") {
+            Task { try? await APIClient.shared.logoutMobile(refreshToken: refresh) }
+        }
         clearTokens()
         currentUser = nil
         isAuthenticated = false

@@ -1,5 +1,9 @@
 import Foundation
 
+extension Notification.Name {
+    static let authSessionExpired = Notification.Name("authSessionExpired")
+}
+
 enum APIError: LocalizedError {
     case invalidURL
     case noData
@@ -64,9 +68,13 @@ final class APIClient {
             if try await refreshToken() {
                 let (retryData, retryResponse) = try await request(path, method: method, body: body)
                 guard let retryHttp = retryResponse as? HTTPURLResponse else { throw APIError.noData }
-                if retryHttp.statusCode == 401 { throw APIError.unauthorized }
+                if retryHttp.statusCode == 401 {
+                    NotificationCenter.default.post(name: .authSessionExpired, object: nil)
+                    throw APIError.unauthorized
+                }
                 return try validate(retryData, statusCode: retryHttp.statusCode)
             } else {
+                NotificationCenter.default.post(name: .authSessionExpired, object: nil)
                 throw APIError.unauthorized
             }
         }
@@ -130,6 +138,15 @@ final class APIClient {
             return true
         }
         return false
+    }
+
+    func logoutMobile(refreshToken: String) async throws {
+        guard let url = URL(string: baseURL + "/api/auth/logout-mobile") else { throw APIError.invalidURL }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try JSONSerialization.data(withJSONObject: ["refreshToken": refreshToken])
+        _ = try await session.data(for: req)
     }
 
     func sendVerification(phone: String) async throws {

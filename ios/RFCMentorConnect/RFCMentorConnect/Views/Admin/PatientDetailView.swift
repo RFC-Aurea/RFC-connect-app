@@ -88,7 +88,7 @@ struct PatientDetailView: View {
                         }
 
                         // Mentor selector
-                        if let mentors = overview?.mentors, !mentors.isEmpty {
+                        if let mentors = overview?.mentors.filter({ $0.status == "active" }), !mentors.isEmpty {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text("Assign Mentor")
                                     .font(.headline)

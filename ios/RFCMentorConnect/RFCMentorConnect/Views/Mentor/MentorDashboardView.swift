@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MentorDashboardView: View {
     @EnvironmentObject var auth: AuthService
+    @Environment(\.scenePhase) private var scenePhase
     @State private var mentees: [PatientSummary] = []
     @State private var isLoading = true
 
@@ -32,11 +33,15 @@ struct MentorDashboardView: View {
                         }
                         .padding(.bottom, 24)
                     }
+                    .refreshable { await loadData() }
                 }
             }
             .navigationTitle("Mentor Dashboard")
             .navigationBarTitleDisplayMode(.large)
             .task { await loadData() }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active { Task { await loadData() } }
+            }
         }
     }
 

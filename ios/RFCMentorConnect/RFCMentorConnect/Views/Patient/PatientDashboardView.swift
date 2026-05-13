@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PatientDashboardView: View {
     @EnvironmentObject var auth: AuthService
+    @Environment(\.scenePhase) private var scenePhase
     @State private var dashboard: APIClient.PatientDashboard?
     @State private var isLoading = true
     @State private var selectedMentorForChat: MentorSummary?
@@ -45,11 +46,15 @@ struct PatientDashboardView: View {
                         }
                         .padding(.bottom, 24)
                     }
+                    .refreshable { await loadData() }
                 }
             }
             .navigationTitle("My Dashboard")
             .navigationBarTitleDisplayMode(.large)
             .task { await loadData() }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active { Task { await loadData() } }
+            }
             .navigationDestination(isPresented: $navigateToChat) {
                 if let mentor = selectedMentorForChat {
                     ChatView(partnerId: mentor.id, partnerName: mentor.name)

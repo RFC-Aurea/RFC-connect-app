@@ -26,6 +26,7 @@ import {
   type AttachmentType,
 } from "./upload";
 import { getIO } from "./socket";
+import { TREATMENT_PHASES } from "../shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -235,8 +236,16 @@ export async function registerRoutes(
         return;
       }
 
+      const currentUser = await storage.getUser(req.user!.id);
+      const verifyUpdates: Record<string, unknown> = { phone, phoneVerified: true };
+      // If the user already changed their temp password, completing phone verification
+      // means onboarding is done — activate them.
+      if (currentUser && currentUser.mustChangePassword === false) {
+        verifyUpdates.status = "active";
+      }
+
       if (!twilioEnabled) {
-        await storage.updateUser(req.user!.id, { phone, phoneVerified: true });
+        await storage.updateUser(req.user!.id, verifyUpdates);
         res.json({ success: true, verified: true });
         return;
       }
@@ -247,7 +256,7 @@ export async function registerRoutes(
         return;
       }
 
-      await storage.updateUser(req.user!.id, { phone, phoneVerified: true });
+      await storage.updateUser(req.user!.id, verifyUpdates);
       res.json({ success: true, verified: true });
     } catch (err) { next(err); }
   });
@@ -285,7 +294,16 @@ export async function registerRoutes(
       }
 
       const hashed = await hashPassword(newPassword);
-      await storage.updateUser(user.id, { password: hashed, mustChangePassword: false });
+      const updates: Record<string, unknown> = { password: hashed, mustChangePassword: false };
+      // If onboarding is now fully complete (phone verified + temp password replaced),
+      // activate the account so admin sees them as active.
+      if (user.phoneVerified && user.mustChangePassword) {
+        updates.status = "active";
+      }
+      await storage.updateUser(user.id, updates);
+
+      // Invalidate all other sessions — anyone holding a refresh token loses access.
+      await storage.deleteRefreshTokensByUserId(user.id);
 
       await storage.createAuditLog({
         actorId: user.id,
@@ -317,6 +335,9 @@ export async function registerRoutes(
       const tempPassword = randomBytes(4).toString("hex");
       const hashed = await hashPassword(tempPassword);
       await storage.updateUser(user.id, { password: hashed, mustChangePassword: true });
+
+      // Invalidate all existing sessions — anyone holding a refresh token loses access.
+      await storage.deleteRefreshTokensByUserId(user.id);
 
       await storage.createAuditLog({
         actorId: user.id,
@@ -532,6 +553,9 @@ export async function registerRoutes(
       const patientId = parseInt(req.params.id as string);
       const { phase } = req.body;
       if (!phase) return res.status(400).json({ message: "Phase is required" });
+      if (!(TREATMENT_PHASES as readonly string[]).includes(phase)) {
+        return res.status(400).json({ message: "Invalid phase" });
+      }
       const updated = await storage.upsertPatientPhase({
         patientId,
         currentPhase: phase,

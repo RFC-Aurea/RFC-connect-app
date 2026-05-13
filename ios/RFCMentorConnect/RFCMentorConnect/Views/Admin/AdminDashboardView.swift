@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AdminDashboardView: View {
     @EnvironmentObject var auth: AuthService
+    @Environment(\.scenePhase) private var scenePhase
     @State private var overview: AdminOverview?
     @State private var isLoading = true
     @State private var showCreateUser = false
@@ -12,6 +13,7 @@ struct AdminDashboardView: View {
     @State private var showDeleteAlert = false
     @State private var pendingDeleteId: Int?
     @State private var pendingDeleteName: String = ""
+    @State private var pendingDeleteMessage: String = ""
 
     var unassignedPatients: [PatientSummary] {
         overview?.patients.filter { $0.mentorId == nil } ?? []
@@ -114,6 +116,7 @@ struct AdminDashboardView: View {
                         }
                         .padding(.bottom, 24)
                     }
+                    .refreshable { await loadData() }
                 }
             }
             .navigationTitle("Admin Dashboard")
@@ -137,13 +140,16 @@ struct AdminDashboardView: View {
                 MentorDetailView(mentor: mentor, overview: overview)
             }
             .task { await loadData() }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active { Task { await loadData() } }
+            }
             .alert("Delete User", isPresented: $showDeleteAlert) {
                 Button("Delete", role: .destructive) {
                     if let id = pendingDeleteId { deleteUser(userId: id) }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Are you sure you want to delete \(pendingDeleteName)? This cannot be undone.")
+                Text(pendingDeleteMessage)
             }
         }
     }
@@ -237,6 +243,7 @@ struct AdminDashboardView: View {
             Button(role: .destructive) {
                 pendingDeleteId = patient.id
                 pendingDeleteName = patient.name
+                pendingDeleteMessage = "Are you sure you want to delete \(patient.name)? This cannot be undone."
                 showDeleteAlert = true
             } label: {
                 Label("Delete", systemImage: "trash")
@@ -277,8 +284,12 @@ struct AdminDashboardView: View {
         .padding(.vertical, 10)
         .contextMenu {
             Button(role: .destructive) {
+                let assignedCount = overview?.patients.filter { $0.mentorId == mentor.id }.count ?? 0
                 pendingDeleteId = mentor.id
                 pendingDeleteName = mentor.name
+                pendingDeleteMessage = assignedCount > 0
+                    ? "This mentor has \(assignedCount) active patient\(assignedCount == 1 ? "" : "s") who will be unassigned. Are you sure?"
+                    : "Are you sure you want to delete \(mentor.name)? This cannot be undone."
                 showDeleteAlert = true
             } label: {
                 Label("Delete", systemImage: "trash")
