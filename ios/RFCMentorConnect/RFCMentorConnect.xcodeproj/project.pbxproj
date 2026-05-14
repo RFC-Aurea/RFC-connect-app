@@ -32,6 +32,13 @@
 		AA000023 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA100023 /* Assets.xcassets */; };
 		AA000030 /* MentorResourcesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100030 /* MentorResourcesView.swift */; };
 		AA000031 /* PushNotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100031 /* PushNotificationService.swift */; };
+		AA000040 /* VideoCallService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100040 /* VideoCallService.swift */; };
+		AA000041 /* VideoCall.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100041 /* VideoCall.swift */; };
+		AA000042 /* VideoCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100042 /* VideoCallView.swift */; };
+		AA000043 /* IncomingCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100043 /* IncomingCallView.swift */; };
+		AA000044 /* ScheduleCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100044 /* ScheduleCallView.swift */; };
+		F856CC432FB63738004CBFAE /* Daily in Frameworks */ = {isa = PBXBuildFile; productRef = F856CC422FB63738004CBFAE /* Daily */; };
+		F856CC452FB63738004CBFAE /* DailySystemBroadcast in Frameworks */ = {isa = PBXBuildFile; productRef = F856CC442FB63738004CBFAE /* DailySystemBroadcast */; };
 		F8E1C01D2F6DCEA90063E454 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = AAPKG0001 /* SocketIO */; };
 /* End PBXBuildFile section */
 
@@ -61,7 +68,13 @@
 		AA100023 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AA100030 /* MentorResourcesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MentorResourcesView.swift; sourceTree = "<group>"; };
 		AA100031 /* PushNotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationService.swift; sourceTree = "<group>"; };
+		AA100040 /* VideoCallService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCallService.swift; sourceTree = "<group>"; };
+		AA100041 /* VideoCall.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCall.swift; sourceTree = "<group>"; };
+		AA100042 /* VideoCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCallView.swift; sourceTree = "<group>"; };
+		AA100043 /* IncomingCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingCallView.swift; sourceTree = "<group>"; };
+		AA100044 /* ScheduleCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleCallView.swift; sourceTree = "<group>"; };
 		AAPROD001 /* RFCMentorConnect.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RFCMentorConnect.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F856CC462FB63A17004CBFAE /* RFCMentorConnect.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RFCMentorConnect.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,7 +82,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F856CC432FB63738004CBFAE /* Daily in Frameworks */,
 				F8E1C01D2F6DCEA90063E454 /* SocketIO in Frameworks */,
+				F856CC452FB63738004CBFAE /* DailySystemBroadcast in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -87,6 +102,7 @@
 		AAGROUP01 /* RFCMentorConnect */ = {
 			isa = PBXGroup;
 			children = (
+				F856CC462FB63A17004CBFAE /* RFCMentorConnect.entitlements */,
 				AA100001 /* RFCMentorConnectApp.swift */,
 				AAGROUP02 /* Services */,
 				AAGROUP03 /* Models */,
@@ -104,6 +120,7 @@
 				AA100004 /* AuthService.swift */,
 				AA100005 /* SocketService.swift */,
 				AA100031 /* PushNotificationService.swift */,
+				AA100040 /* VideoCallService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -115,6 +132,7 @@
 				AA100007 /* Message.swift */,
 				AA100008 /* Resource.swift */,
 				AA100009 /* AdminOverview.swift */,
+				AA100041 /* VideoCall.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -129,6 +147,7 @@
 				AAGROUP09 /* Chat */,
 				AAGROUP10 /* Journey */,
 				AAGROUP11 /* Settings */,
+				AAGROUP12 /* VideoCall */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -196,6 +215,16 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		AAGROUP12 /* VideoCall */ = {
+			isa = PBXGroup;
+			children = (
+				AA100042 /* VideoCallView.swift */,
+				AA100043 /* IncomingCallView.swift */,
+				AA100044 /* ScheduleCallView.swift */,
+			);
+			path = VideoCall;
+			sourceTree = "<group>";
+		};
 		AAGROUP99 /* Products */ = {
 			isa = PBXGroup;
 			children = (
@@ -222,6 +251,8 @@
 			name = RFCMentorConnect;
 			packageProductDependencies = (
 				AAPKG0001 /* SocketIO */,
+				F856CC422FB63738004CBFAE /* Daily */,
+				F856CC442FB63738004CBFAE /* DailySystemBroadcast */,
 			);
 			productName = RFCMentorConnect;
 			productReference = AAPROD001 /* RFCMentorConnect.app */;
@@ -235,7 +266,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					AATARGET1 = {
 						CreatedOnToolsVersion = 15.0;
@@ -253,6 +284,7 @@
 			mainGroup = AAGROUP00;
 			packageReferences = (
 				AAPKG0003 /* XCRemoteSwiftPackageReference "socket" */,
+				F856CC412FB63738004CBFAE /* XCRemoteSwiftPackageReference "daily-client-ios" */,
 			);
 			productRefGroup = AAGROUP99 /* Products */;
 			projectDirPath = "";
@@ -303,6 +335,11 @@
 				AA000020 /* JourneyHubView.swift in Sources */,
 				AA000021 /* ResourceDetailView.swift in Sources */,
 				AA000022 /* SettingsView.swift in Sources */,
+				AA000040 /* VideoCallService.swift in Sources */,
+				AA000041 /* VideoCall.swift in Sources */,
+				AA000042 /* VideoCallView.swift in Sources */,
+				AA000043 /* IncomingCallView.swift in Sources */,
+				AA000044 /* ScheduleCallView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -333,6 +370,7 @@
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLE = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
@@ -344,6 +382,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 6BU8UKWQXR;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -366,6 +405,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -376,13 +416,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = RFCMentorConnect/RFCMentorConnect.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = 6BU8UKWQXR;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "RFC Mentor Connect needs camera access to send photos in chat.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "RFC Mentor Connect needs microphone access to send voice messages.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is needed for video calls with your mentor and to send photos in chat.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access is needed for video calls with your mentor and to send voice messages.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "RFC Mentor Connect needs photo library access to send images in chat.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -426,6 +466,7 @@
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_CYCLE = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
 				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
@@ -437,6 +478,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 6BU8UKWQXR;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -451,6 +493,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				VALIDATE_PRODUCT = YES;
@@ -462,13 +505,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = RFCMentorConnect/RFCMentorConnect.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 2;
-				DEVELOPMENT_TEAM = 6BU8UKWQXR;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "RFC Mentor Connect needs camera access to send photos in chat.";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "RFC Mentor Connect needs microphone access to send voice messages.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Camera access is needed for video calls with your mentor and to send photos in chat.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Microphone access is needed for video calls with your mentor and to send voice messages.";
 				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "RFC Mentor Connect needs photo library access to send images in chat.";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -520,6 +563,14 @@
 				minimumVersion = 16.1.1;
 			};
 		};
+		F856CC412FB63738004CBFAE /* XCRemoteSwiftPackageReference "daily-client-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/daily-co/daily-client-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.37.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -527,6 +578,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AAPKG0003 /* XCRemoteSwiftPackageReference "socket" */;
 			productName = SocketIO;
+		};
+		F856CC422FB63738004CBFAE /* Daily */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F856CC412FB63738004CBFAE /* XCRemoteSwiftPackageReference "daily-client-ios" */;
+			productName = Daily;
+		};
+		F856CC442FB63738004CBFAE /* DailySystemBroadcast */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F856CC412FB63738004CBFAE /* XCRemoteSwiftPackageReference "daily-client-ios" */;
+			productName = DailySystemBroadcast;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

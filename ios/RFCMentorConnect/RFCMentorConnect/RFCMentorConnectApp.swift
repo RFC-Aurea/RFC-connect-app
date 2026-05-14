@@ -44,6 +44,14 @@ struct RFCMentorConnectApp: App {
 
 struct ContentView: View {
     @EnvironmentObject var auth: AuthService
+    @ObservedObject private var socketService = SocketService.shared
+
+    @State private var activeCall: ActiveVideoCall?
+
+    struct ActiveVideoCall: Identifiable {
+        let id: Int
+        let roomUrl: String
+    }
 
     var body: some View {
         Group {
@@ -70,6 +78,50 @@ struct ContentView: View {
                 SocketService.shared.connect()
             } else {
                 SocketService.shared.disconnect()
+            }
+        }
+        .fullScreenCover(item: $activeCall) { call in
+            VideoCallView(videoCallId: call.id, roomUrl: call.roomUrl)
+        }
+        .fullScreenCover(
+            isPresented: Binding(
+                get: { socketService.incomingCall != nil && activeCall == nil },
+                set: { if !$0 { socketService.clearIncomingCall() } },
+            ),
+        ) {
+            if let incoming = socketService.incomingCall {
+                IncomingCallView(
+                    videoCallId: incoming.videoCallId,
+                    roomUrl: incoming.roomUrl,
+                    callerName: incoming.callerName,
+                    onAccept: { acceptIncoming(incoming) },
+                    onReject: { rejectIncoming(incoming) },
+                )
+            }
+        }
+    }
+
+    private func acceptIncoming(_ call: IncomingVideoCall) {
+        socketService.clearIncomingCall()
+        Task {
+            do {
+                _ = try await APIClient.shared.joinVideoCall(callId: call.videoCallId)
+            } catch {
+                print("[VideoCall] join API failed: \(error.localizedDescription)")
+            }
+            await MainActor.run {
+                activeCall = ActiveVideoCall(id: call.videoCallId, roomUrl: call.roomUrl)
+            }
+        }
+    }
+
+    private func rejectIncoming(_ call: IncomingVideoCall) {
+        socketService.clearIncomingCall()
+        Task {
+            do {
+                try await APIClient.shared.rejectVideoCall(callId: call.videoCallId)
+            } catch {
+                print("[VideoCall] reject API failed: \(error.localizedDescription)")
             }
         }
     }

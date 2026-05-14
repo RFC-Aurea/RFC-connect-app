@@ -27,6 +27,7 @@ import {
 } from "./upload";
 import { getIO } from "./socket";
 import { sendPushNotification } from "./apns";
+import { createDailyRoom, deleteDailyRoom, dailyEnabled } from "./daily";
 import { TREATMENT_PHASES } from "../shared/schema";
 
 function previewForMessage(content: string, messageType: string): string {
@@ -743,6 +744,250 @@ export async function registerRoutes(
       }
 
       return res.status(201).json(message);
+    } catch (err) { next(err); }
+  });
+
+  // -------------------------------------------------------------------------
+  // Video calls (Daily.co)
+  // -------------------------------------------------------------------------
+
+  async function getAssignmentForUser(userId: number, role: "patient" | "mentor") {
+    const assignments = role === "patient"
+      ? await storage.getAssignmentsByPatient(userId)
+      : await storage.getAssignmentsByMentor(userId);
+    return assignments[0];
+  }
+
+  async function userInAssignment(userId: number, assignmentId: number): Promise<boolean> {
+    const all = await storage.getAllAssignments();
+    return all.some(a => a.id === assignmentId && (a.mentorId === userId || a.patientId === userId));
+  }
+
+  app.post("/api/video-calls/start", requireAuth, async (req, res, next) => {
+    try {
+      if (req.user!.role === "admin") {
+        return res.status(403).json({ message: "Admins cannot start video calls" });
+      }
+      if (!dailyEnabled) {
+        return res.status(503).json({ message: "Video calling is not configured" });
+      }
+
+      const role = req.user!.role as "patient" | "mentor";
+      const assignment = await getAssignmentForUser(req.user!.id, role);
+      if (!assignment) {
+        return res.status(400).json({ message: "No active mentor assignment" });
+      }
+
+      const partnerId = role === "patient" ? assignment.mentorId : assignment.patientId;
+      const partner = await storage.getUser(partnerId);
+      const caller = await storage.getUser(req.user!.id);
+      if (!partner || !caller) {
+        return res.status(404).json({ message: "Partner not found" });
+      }
+
+      const room = await createDailyRoom(assignment.id);
+      const call = await storage.createVideoCall({
+        assignmentId: assignment.id,
+        roomName: room.name,
+        roomUrl: room.url,
+        status: "active",
+        startedAt: new Date(),
+        initiatedBy: req.user!.id,
+      });
+
+      const io = getIO();
+      if (io) {
+        io.to(`assignment:${assignment.id}`).emit("video-call:incoming", {
+          videoCallId: call.id,
+          roomUrl: room.url,
+          callerName: caller.name,
+          callerId: caller.id,
+        });
+      }
+
+      if (partner.apnsDeviceToken) {
+        sendPushNotification(partner.apnsDeviceToken, {
+          title: "Video Call",
+          body: `${caller.name} is calling you`,
+          data: {
+            type: "video_call",
+            videoCallId: call.id,
+            roomUrl: room.url,
+          },
+        }).catch(err => console.error("[apns] video-call push failed:", err));
+      }
+
+      return res.status(201).json({
+        videoCallId: call.id,
+        roomUrl: room.url,
+        roomName: room.name,
+      });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/video-calls/schedule", requireAuth, async (req, res, next) => {
+    try {
+      if (req.user!.role === "admin") {
+        return res.status(403).json({ message: "Admins cannot schedule video calls" });
+      }
+      if (!dailyEnabled) {
+        return res.status(503).json({ message: "Video calling is not configured" });
+      }
+
+      const { scheduledAt } = req.body as { scheduledAt?: string };
+      if (!scheduledAt) {
+        return res.status(400).json({ message: "scheduledAt is required" });
+      }
+      const scheduledDate = new Date(scheduledAt);
+      if (isNaN(scheduledDate.getTime())) {
+        return res.status(400).json({ message: "scheduledAt must be a valid ISO date string" });
+      }
+      if (scheduledDate.getTime() < Date.now() - 60_000) {
+        return res.status(400).json({ message: "scheduledAt must be in the future" });
+      }
+
+      const role = req.user!.role as "patient" | "mentor";
+      const assignment = await getAssignmentForUser(req.user!.id, role);
+      if (!assignment) {
+        return res.status(400).json({ message: "No active mentor assignment" });
+      }
+
+      const partnerId = role === "patient" ? assignment.mentorId : assignment.patientId;
+      const partner = await storage.getUser(partnerId);
+      const caller = await storage.getUser(req.user!.id);
+      if (!partner || !caller) {
+        return res.status(404).json({ message: "Partner not found" });
+      }
+
+      const expSeconds = Math.floor(scheduledDate.getTime() / 1000) + 3600;
+      const room = await createDailyRoom(assignment.id, expSeconds);
+
+      const call = await storage.createVideoCall({
+        assignmentId: assignment.id,
+        roomName: room.name,
+        roomUrl: room.url,
+        status: "scheduled",
+        scheduledAt: scheduledDate,
+        initiatedBy: req.user!.id,
+      });
+
+      const io = getIO();
+      if (io) {
+        io.to(`assignment:${assignment.id}`).emit("video-call:scheduled", {
+          videoCallId: call.id,
+          scheduledAt: scheduledDate.toISOString(),
+          callerName: caller.name,
+          callerId: caller.id,
+        });
+      }
+
+      const friendlyTime = scheduledDate.toLocaleString("en-US", {
+        month: "short", day: "numeric", hour: "numeric", minute: "2-digit",
+      });
+      if (partner.apnsDeviceToken) {
+        sendPushNotification(partner.apnsDeviceToken, {
+          title: "Scheduled Video Call",
+          body: `${caller.name} wants to video call at ${friendlyTime}`,
+          data: {
+            type: "video_call_scheduled",
+            videoCallId: call.id,
+            scheduledAt: scheduledDate.toISOString(),
+          },
+        }).catch(err => console.error("[apns] video-call push failed:", err));
+      }
+
+      return res.status(201).json({
+        videoCallId: call.id,
+        roomUrl: room.url,
+        scheduledAt: scheduledDate.toISOString(),
+      });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/video-calls/:id/join", requireAuth, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id as string);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid call id" });
+      const call = await storage.getVideoCall(id);
+      if (!call) return res.status(404).json({ message: "Video call not found" });
+
+      const allowed = req.user!.role === "admin"
+        || (await userInAssignment(req.user!.id, call.assignmentId));
+      if (!allowed) {
+        return res.status(403).json({ message: "Not part of this call" });
+      }
+
+      // Promote to active if they're joining a scheduled call.
+      if (call.status === "scheduled") {
+        await storage.updateVideoCall(call.id, { status: "active", startedAt: new Date() });
+      }
+
+      return res.json({ roomUrl: call.roomUrl });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/video-calls/:id/end", requireAuth, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id as string);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid call id" });
+      const call = await storage.getVideoCall(id);
+      if (!call) return res.status(404).json({ message: "Video call not found" });
+
+      const allowed = req.user!.role === "admin"
+        || (await userInAssignment(req.user!.id, call.assignmentId));
+      if (!allowed) {
+        return res.status(403).json({ message: "Not part of this call" });
+      }
+
+      if (call.status !== "ended") {
+        await storage.updateVideoCall(call.id, { status: "ended", endedAt: new Date() });
+        deleteDailyRoom(call.roomName).catch(err => console.error("[daily] cleanup failed:", err));
+      }
+
+      const io = getIO();
+      if (io) {
+        io.to(`assignment:${call.assignmentId}`).emit("video-call:ended", {
+          videoCallId: call.id,
+        });
+      }
+
+      return res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/video-calls/:id/reject", requireAuth, async (req, res, next) => {
+    try {
+      const id = parseInt(req.params.id as string);
+      if (isNaN(id)) return res.status(400).json({ message: "Invalid call id" });
+      const call = await storage.getVideoCall(id);
+      if (!call) return res.status(404).json({ message: "Video call not found" });
+
+      const allowed = req.user!.role === "admin"
+        || (await userInAssignment(req.user!.id, call.assignmentId));
+      if (!allowed) {
+        return res.status(403).json({ message: "Not part of this call" });
+      }
+
+      if (call.status !== "ended") {
+        await storage.updateVideoCall(call.id, { status: "ended", endedAt: new Date() });
+        deleteDailyRoom(call.roomName).catch(err => console.error("[daily] cleanup failed:", err));
+      }
+
+      const io = getIO();
+      if (io) {
+        io.to(`assignment:${call.assignmentId}`).emit("video-call:rejected", {
+          videoCallId: call.id,
+        });
+      }
+
+      return res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
+  app.get("/api/video-calls/upcoming", requireAuth, async (req, res, next) => {
+    try {
+      const calls = await storage.getUpcomingVideoCalls(req.user!.id);
+      return res.json(calls);
     } catch (err) { next(err); }
   });
 

@@ -1,8 +1,8 @@
-import { eq, and, or, desc } from "drizzle-orm";
+import { eq, and, or, desc, inArray } from "drizzle-orm";
 import { db } from "./db";
 import {
   users, mentorAssignments, patientPhases, messages, reports, resources, refreshTokens,
-  notifications, auditLog, chatAttachments,
+  notifications, auditLog, chatAttachments, videoCalls,
   type User, type InsertUser,
   type MentorAssignment, type InsertMentorAssignment,
   type PatientPhase, type InsertPatientPhase,
@@ -13,6 +13,7 @@ import {
   type Notification, type InsertNotification,
   type AuditLog, type InsertAuditLog,
   type ChatAttachment, type InsertChatAttachment,
+  type VideoCall, type InsertVideoCall,
 } from "@shared/schema";
 
 export interface IStorage {
@@ -61,6 +62,12 @@ export interface IStorage {
   getChatAttachment(id: number): Promise<ChatAttachment | undefined>;
   getChatAttachmentsByMessage(messageId: number): Promise<ChatAttachment[]>;
   linkAttachmentToMessage(attachmentId: number, messageId: number): Promise<void>;
+
+  createVideoCall(call: InsertVideoCall): Promise<VideoCall>;
+  getVideoCall(id: number): Promise<VideoCall | undefined>;
+  updateVideoCall(id: number, data: Partial<InsertVideoCall>): Promise<VideoCall | undefined>;
+  getVideoCallsByAssignment(assignmentId: number): Promise<VideoCall[]>;
+  getUpcomingVideoCalls(userId: number): Promise<VideoCall[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -247,6 +254,55 @@ export class DatabaseStorage implements IStorage {
       .update(chatAttachments)
       .set({ messageId })
       .where(eq(chatAttachments.id, attachmentId));
+  }
+
+  async createVideoCall(call: InsertVideoCall): Promise<VideoCall> {
+    const [created] = await db.insert(videoCalls).values(call).returning();
+    return created;
+  }
+
+  async getVideoCall(id: number): Promise<VideoCall | undefined> {
+    const [call] = await db.select().from(videoCalls).where(eq(videoCalls.id, id));
+    return call;
+  }
+
+  async updateVideoCall(id: number, data: Partial<InsertVideoCall>): Promise<VideoCall | undefined> {
+    const [updated] = await db.update(videoCalls).set(data).where(eq(videoCalls.id, id)).returning();
+    return updated;
+  }
+
+  async getVideoCallsByAssignment(assignmentId: number): Promise<VideoCall[]> {
+    return db
+      .select()
+      .from(videoCalls)
+      .where(eq(videoCalls.assignmentId, assignmentId))
+      .orderBy(desc(videoCalls.createdAt));
+  }
+
+  async getUpcomingVideoCalls(userId: number): Promise<VideoCall[]> {
+    // Active or scheduled calls in any assignment involving this user.
+    const userAssignments = await db
+      .select({ id: mentorAssignments.id })
+      .from(mentorAssignments)
+      .where(
+        or(
+          eq(mentorAssignments.mentorId, userId),
+          eq(mentorAssignments.patientId, userId),
+        ),
+      );
+    const assignmentIds = userAssignments.map(a => a.id);
+    if (assignmentIds.length === 0) return [];
+
+    return db
+      .select()
+      .from(videoCalls)
+      .where(
+        and(
+          inArray(videoCalls.assignmentId, assignmentIds),
+          or(eq(videoCalls.status, "active"), eq(videoCalls.status, "scheduled")),
+        ),
+      )
+      .orderBy(videoCalls.scheduledAt);
   }
 }
 

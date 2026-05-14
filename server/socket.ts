@@ -26,6 +26,20 @@ interface ServerToClientEvents {
   }) => void;
   "typing:start": (data: { userId: number }) => void;
   "typing:stop": (data: { userId: number }) => void;
+  "video-call:incoming": (data: {
+    videoCallId: number;
+    roomUrl: string;
+    callerName: string;
+    callerId: number;
+  }) => void;
+  "video-call:scheduled": (data: {
+    videoCallId: number;
+    scheduledAt: string;
+    callerName: string;
+    callerId: number;
+  }) => void;
+  "video-call:ended": (data: { videoCallId: number }) => void;
+  "video-call:rejected": (data: { videoCallId: number }) => void;
 }
 
 interface ClientToServerEvents {

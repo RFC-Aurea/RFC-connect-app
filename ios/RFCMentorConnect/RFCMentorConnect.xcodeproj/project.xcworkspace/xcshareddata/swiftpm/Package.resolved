@@ -1,6 +1,15 @@
 {
-  "originHash" : "c9fb241c5f575df8f20b39649006995779013948e60c51c3f85b729f83b054e7",
+  "originHash" : "c7e6a2d96e18d0587f8fba3947bd424021995fd6bd4dd92474798620bf71d4f8",
   "pins" : [
+    {
+      "identity" : "daily-client-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/daily-co/daily-client-ios.git",
+      "state" : {
+        "revision" : "276f9aff6bbdb36d58e763b7c0d77167ab5f51ca",
+        "version" : "0.37.0"
+      }
+    },
     {
       "identity" : "socket.io-client-swift",
       "kind" : "remoteSourceControl",

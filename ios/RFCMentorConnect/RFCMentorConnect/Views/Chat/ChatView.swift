@@ -35,6 +35,17 @@ struct ChatView: View {
     @State private var pendingUpload: PendingUpload?
     @StateObject private var voicePlayerManager = VoicePlayerManager()
 
+    @State private var showVideoCallMenu = false
+    @State private var showScheduleSheet = false
+    @State private var startingCall = false
+    @State private var activeVideoCall: ActiveVideoCall?
+    @State private var videoCallError: String?
+
+    private struct ActiveVideoCall: Identifiable {
+        let id: Int
+        let roomUrl: String
+    }
+
     private struct PendingUpload {
         let data: Data
         let fileName: String
@@ -69,6 +80,40 @@ struct ChatView: View {
                 Button("Cancel", role: .cancel) { pendingUpload = nil }
             } message: {
                 Text(uploadErrorMessage)
+            }
+            .alert("Video Call", isPresented: Binding(
+                get: { videoCallError != nil },
+                set: { if !$0 { videoCallError = nil } },
+            )) {
+                Button("OK", role: .cancel) { videoCallError = nil }
+            } message: {
+                Text(videoCallError ?? "")
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showVideoCallMenu = true
+                    } label: {
+                        if startingCall {
+                            ProgressView().tint(Color(hex: "1B4332"))
+                        } else {
+                            Image(systemName: "video.fill")
+                                .foregroundColor(Color(hex: "1B4332"))
+                        }
+                    }
+                    .disabled(startingCall)
+                }
+            }
+            .confirmationDialog("Video Call", isPresented: $showVideoCallMenu, titleVisibility: .visible) {
+                Button("Start Video Call") { Task { await startVideoCall() } }
+                Button("Schedule Video Call") { showScheduleSheet = true }
+                Button("Cancel", role: .cancel) {}
+            }
+            .sheet(isPresented: $showScheduleSheet) {
+                ScheduleCallView()
+            }
+            .fullScreenCover(item: $activeVideoCall) { call in
+                VideoCallView(videoCallId: call.id, roomUrl: call.roomUrl)
             }
     }
 
@@ -313,6 +358,17 @@ struct ChatView: View {
             pendingUpload = PendingUpload(data: data, fileName: fileName, mimeType: mimeType, type: type, durationSeconds: durationSeconds)
             uploadErrorMessage = "Couldn't send \(type): \(error.localizedDescription)"
             showUploadErrorAlert = true
+        }
+    }
+
+    private func startVideoCall() async {
+        startingCall = true
+        defer { startingCall = false }
+        do {
+            let resp = try await APIClient.shared.startVideoCall()
+            activeVideoCall = ActiveVideoCall(id: resp.videoCallId, roomUrl: resp.roomUrl)
+        } catch {
+            videoCallError = "Couldn't start the call: \(error.localizedDescription)"
         }
     }
 

@@ -245,6 +245,41 @@ final class APIClient {
         _ = try await requestWithRetry("/api/reports", method: "POST", body: ["messageId": messageId, "reason": reason])
     }
 
+    // MARK: - Video Calls
+
+    func startVideoCall() async throws -> VideoCallStartResponse {
+        let data = try await requestWithRetry("/api/video-calls/start", method: "POST")
+        return try decode(VideoCallStartResponse.self, from: data)
+    }
+
+    func scheduleVideoCall(scheduledAt: Date) async throws -> VideoCallScheduleResponse {
+        let iso = ISO8601DateFormatter().string(from: scheduledAt)
+        let data = try await requestWithRetry(
+            "/api/video-calls/schedule",
+            method: "POST",
+            body: ["scheduledAt": iso],
+        )
+        return try decode(VideoCallScheduleResponse.self, from: data)
+    }
+
+    func joinVideoCall(callId: Int) async throws -> VideoCallJoinResponse {
+        let data = try await requestWithRetry("/api/video-calls/\(callId)/join", method: "POST")
+        return try decode(VideoCallJoinResponse.self, from: data)
+    }
+
+    func endVideoCall(callId: Int) async throws {
+        _ = try await requestWithRetry("/api/video-calls/\(callId)/end", method: "POST")
+    }
+
+    func rejectVideoCall(callId: Int) async throws {
+        _ = try await requestWithRetry("/api/video-calls/\(callId)/reject", method: "POST")
+    }
+
+    func getUpcomingVideoCalls() async throws -> [VideoCall] {
+        let data = try await requestWithRetry("/api/video-calls/upcoming")
+        return try decode([VideoCall].self, from: data)
+    }
+
     // MARK: - Resources
 
     func getResources(phase: String? = nil) async throws -> [Resource] {

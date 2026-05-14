@@ -113,6 +113,19 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const videoCalls = pgTable("video_calls", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  assignmentId: integer("assignment_id").notNull().references(() => mentorAssignments.id),
+  roomName: text("room_name").notNull(),
+  roomUrl: text("room_url").notNull(),
+  status: text("status").notNull(),
+  scheduledAt: timestamp("scheduled_at"),
+  startedAt: timestamp("started_at"),
+  endedAt: timestamp("ended_at"),
+  initiatedBy: integer("initiated_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const auditLog = pgTable("audit_log", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   actorId: integer("actor_id").notNull().references(() => users.id),
@@ -134,6 +147,7 @@ export type Resource = typeof resources.$inferSelect;
 export type ChatAttachment = typeof chatAttachments.$inferSelect;
 export type Notification = typeof notifications.$inferSelect;
 export type AuditLog = typeof auditLog.$inferSelect;
+export type VideoCall = typeof videoCalls.$inferSelect;
 
 export type InsertUser = {
   name: string;
@@ -214,4 +228,15 @@ export type InsertAuditLog = {
   action: string;
   targetId?: number | null;
   details?: string | null;
+};
+
+export type InsertVideoCall = {
+  assignmentId: number;
+  roomName: string;
+  roomUrl: string;
+  status: "active" | "ended" | "scheduled";
+  scheduledAt?: Date | null;
+  startedAt?: Date | null;
+  endedAt?: Date | null;
+  initiatedBy: number;
 };
