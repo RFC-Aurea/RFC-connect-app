@@ -38,7 +38,7 @@ final class VideoCallService: NSObject, ObservableObject {
         callClient = client
 
         do {
-            try await client.join(url: parsed)
+            _ = try await client.join(url: parsed)
             isInCall = true
             refreshTracks()
         } catch {
@@ -101,7 +101,7 @@ final class VideoCallService: NSObject, ObservableObject {
         // Use the first remote participant (1:1 call topology).
         if let remote = participants.remote.values.first {
             remoteVideoTrack = remote.media?.camera.track
-            remoteParticipantName = remote.info.userName
+            remoteParticipantName = remote.info.username
         } else {
             remoteVideoTrack = nil
             remoteParticipantName = nil
