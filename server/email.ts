@@ -54,6 +54,16 @@ function buildEmailHtml(params: {
       </tr>
     </table>`;
 
+  const downloadButton = `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
+      <tr>
+        <td align="center">
+          <a href="https://apps.apple.com/app/id6761559301" style="display:inline-block;background-color:#1B4332;color:#ffffff;text-decoration:none;font-size:15px;font-weight:600;padding:14px 32px;border-radius:8px;">Download RFC Mentor Connect</a>
+          <p style="margin:12px 0 0;color:#888;font-size:12px;line-height:1.5;">Search 'RFC Mentor Connect' on the App Store if the link above doesn't work.</p>
+        </td>
+      </tr>
+    </table>`;
+
   const setupSteps = `
     <h3 style="margin:0 0 12px;color:#1B4332;font-size:16px;">Getting Started</h3>
     <ol style="margin:0 0 24px;padding-left:20px;color:#475569;font-size:15px;line-height:1.8;">
@@ -99,6 +109,7 @@ function buildEmailHtml(params: {
               </p>
               <h3 style="margin:0 0 12px;color:#1B4332;font-size:16px;">Your Login Credentials</h3>
               ${credentialsBox}
+              ${downloadButton}
               ${setupSteps}
               <h3 style="margin:0 0 12px;color:#1B4332;font-size:16px;">What You'll Find in the App</h3>
               <ul style="margin:0 0 24px;padding-left:20px;color:#475569;font-size:15px;line-height:1.8;">
@@ -146,6 +157,7 @@ function buildEmailHtml(params: {
               </p>
               <h3 style="margin:0 0 12px;color:#1B4332;font-size:16px;">Your Login Credentials</h3>
               ${credentialsBox}
+              ${downloadButton}
               ${setupSteps}
               <h3 style="margin:0 0 12px;color:#1B4332;font-size:16px;">Important Reminders</h3>
               <ul style="margin:0 0 24px;padding-left:20px;color:#475569;font-size:15px;line-height:1.8;">
@@ -189,6 +201,7 @@ function buildEmailHtml(params: {
               </p>
               <h3 style="margin:0 0 12px;color:#1B4332;font-size:16px;">Your Login Credentials</h3>
               ${credentialsBox}
+              ${downloadButton}
               ${setupSteps}
               <p style="margin:0 0 24px;color:#475569;font-size:15px;line-height:1.7;">
                 As an admin, you can create and manage mentor and patient accounts, assign mentors to patients, and oversee the platform.
