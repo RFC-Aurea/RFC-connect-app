@@ -38,11 +38,6 @@ struct PatientDashboardView: View {
                             } else {
                                 noMentorCard
                             }
-
-                            // Journey Hub quick access
-                            if let resources = dashboard?.resources, !resources.isEmpty {
-                                journeyQuickAccess(resources: Array(resources.prefix(2)))
-                            }
                         }
                         .padding(.bottom, 24)
                     }
@@ -176,65 +171,6 @@ struct PatientDashboardView: View {
         .background(Color(hex: "B8860B").opacity(0.1))
         .cornerRadius(16)
         .padding(.horizontal, 16)
-    }
-
-    private func journeyQuickAccess(resources: [Resource]) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Journey Hub")
-                .font(.headline)
-                .padding(.horizontal, 16)
-
-            ForEach(resources) { resource in
-                NavigationLink(destination: ResourceDetailView(resource: resource)) {
-                    resourceCard(resource: resource)
-                }
-            }
-        }
-    }
-
-    private func resourceCard(resource: Resource) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: resourceIcon(resource.type))
-                .font(.title3)
-                .foregroundColor(Color(hex: "1B4332"))
-                .frame(width: 40, height: 40)
-                .background(Color(hex: "1B4332").opacity(0.1))
-                .cornerRadius(10)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(resource.title)
-                    .font(.subheadline.bold())
-                    .foregroundColor(Color(hex: "1B4332"))
-                Text(resource.summary)
-                    .font(.caption)
-                    .foregroundColor(Color(hex: "666666"))
-                    .lineLimit(2)
-                if let readTime = resource.readTime {
-                    Text(readTime)
-                        .font(.caption2)
-                        .foregroundColor(Color(hex: "B8860B"))
-                }
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(Color(hex: "666666"))
-        }
-        .padding(16)
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
-        .padding(.horizontal, 16)
-    }
-
-    private func resourceIcon(_ type: String) -> String {
-        switch type.lowercased() {
-        case "video": return "play.circle.fill"
-        case "article": return "doc.text.fill"
-        case "audio": return "waveform"
-        case "tip": return "lightbulb.fill"
-        default: return "book.fill"
-        }
     }
 
     private func loadData() async {

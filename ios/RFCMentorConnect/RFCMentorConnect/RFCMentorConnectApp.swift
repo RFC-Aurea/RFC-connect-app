@@ -45,12 +45,28 @@ struct RFCMentorConnectApp: App {
 struct ContentView: View {
     @EnvironmentObject var auth: AuthService
     @ObservedObject private var socketService = SocketService.shared
+    @ObservedObject private var pushService = PushNotificationService.shared
 
     @State private var activeCall: ActiveVideoCall?
 
     struct ActiveVideoCall: Identifiable {
         let id: Int
         let roomUrl: String
+    }
+
+    /// Unified incoming-call source — either from socket (foreground) or
+    /// from a tapped push notification (background).
+    private var currentIncomingCall: IncomingVideoCall? {
+        if let socketCall = socketService.incomingCall { return socketCall }
+        if let pushCall = pushService.pendingIncomingCall {
+            return IncomingVideoCall(
+                videoCallId: pushCall.videoCallId,
+                roomUrl: pushCall.roomUrl,
+                callerName: pushCall.callerName,
+                callerId: 0
+            )
+        }
+        return nil
     }
 
     var body: some View {
@@ -85,17 +101,20 @@ struct ContentView: View {
         }
         .fullScreenCover(
             isPresented: Binding(
-                get: { socketService.incomingCall != nil && activeCall == nil },
-                set: { if !$0 { socketService.clearIncomingCall() } },
-            ),
+                get: { currentIncomingCall != nil && activeCall == nil },
+                set: { if !$0 {
+                    socketService.clearIncomingCall()
+                    pushService.clearPendingIncomingCall()
+                } }
+            )
         ) {
-            if let incoming = socketService.incomingCall {
+            if let incoming = currentIncomingCall {
                 IncomingCallView(
                     videoCallId: incoming.videoCallId,
                     roomUrl: incoming.roomUrl,
                     callerName: incoming.callerName,
                     onAccept: { acceptIncoming(incoming) },
-                    onReject: { rejectIncoming(incoming) },
+                    onReject: { rejectIncoming(incoming) }
                 )
             }
         }
@@ -103,6 +122,7 @@ struct ContentView: View {
 
     private func acceptIncoming(_ call: IncomingVideoCall) {
         socketService.clearIncomingCall()
+        pushService.clearPendingIncomingCall()
         Task {
             do {
                 _ = try await APIClient.shared.joinVideoCall(callId: call.videoCallId)
@@ -117,6 +137,7 @@ struct ContentView: View {
 
     private func rejectIncoming(_ call: IncomingVideoCall) {
         socketService.clearIncomingCall()
+        pushService.clearPendingIncomingCall()
         Task {
             do {
                 try await APIClient.shared.rejectVideoCall(callId: call.videoCallId)

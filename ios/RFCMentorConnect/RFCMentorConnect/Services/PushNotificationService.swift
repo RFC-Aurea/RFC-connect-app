@@ -2,6 +2,12 @@ import Foundation
 import UIKit
 import UserNotifications
 
+struct PendingIncomingCall: Equatable {
+    let videoCallId: Int
+    let roomUrl: String
+    let callerName: String
+}
+
 @MainActor
 final class PushNotificationService: NSObject, ObservableObject {
     static let shared = PushNotificationService()
@@ -10,7 +16,15 @@ final class PushNotificationService: NSObject, ObservableObject {
     /// after a fresh login when the user wasn't authenticated at registration time.
     @Published private(set) var deviceTokenHex: String?
 
+    /// Set when the user taps a video-call push notification. RFCMentorConnectApp
+    /// observes this to present IncomingCallView.
+    @Published var pendingIncomingCall: PendingIncomingCall?
+
     private override init() { super.init() }
+
+    func clearPendingIncomingCall() {
+        pendingIncomingCall = nil
+    }
 
     func requestAuthorization() {
         let center = UNUserNotificationCenter.current()
@@ -57,5 +71,31 @@ extension PushNotificationService: UNUserNotificationCenterDelegate {
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         completionHandler([.banner, .sound, .badge])
+    }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let userInfo = response.notification.request.content.userInfo
+        if let type = userInfo["type"] as? String,
+           type == "video_call",
+           let videoCallId = userInfo["videoCallId"] as? Int,
+           let roomUrl = userInfo["roomUrl"] as? String {
+            let body = response.notification.request.content.body
+            let suffix = " is calling you"
+            let callerName = body.hasSuffix(suffix)
+                ? String(body.dropLast(suffix.count))
+                : body
+            Task { @MainActor in
+                PushNotificationService.shared.pendingIncomingCall = PendingIncomingCall(
+                    videoCallId: videoCallId,
+                    roomUrl: roomUrl,
+                    callerName: callerName
+                )
+            }
+        }
+        completionHandler()
     }
 }

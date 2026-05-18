@@ -6,6 +6,7 @@ import Daily
 
 struct VideoCallView: View {
     @ObservedObject private var service = VideoCallService.shared
+    @ObservedObject private var socketService = SocketService.shared
     @Environment(\.dismiss) private var dismiss
 
     let videoCallId: Int
@@ -46,7 +47,7 @@ struct VideoCallView: View {
                             .onChanged { value in
                                 pipOffset = CGSize(
                                     width: pipDragStart.width + value.translation.width,
-                                    height: pipDragStart.height + value.translation.height,
+                                    height: pipDragStart.height + value.translation.height
                                 )
                             }
                             .onEnded { _ in pipDragStart = pipOffset }
@@ -73,6 +74,11 @@ struct VideoCallView: View {
             if !inCall {
                 cleanupAndDismiss()
             }
+        }
+        .onChange(of: socketService.endedCallId) { endedId in
+            guard let endedId, endedId == videoCallId else { return }
+            socketService.acknowledgeEndedCall()
+            Task { await endCall() }
         }
         .onDisappear {
             timer?.invalidate()
@@ -103,7 +109,7 @@ struct VideoCallView: View {
         .background(
             LinearGradient(
                 colors: [Color.black.opacity(0.6), Color.black.opacity(0)],
-                startPoint: .top, endPoint: .bottom,
+                startPoint: .top, endPoint: .bottom
             )
             .ignoresSafeArea(edges: .top)
         )
@@ -113,21 +119,21 @@ struct VideoCallView: View {
         HStack(spacing: 28) {
             controlButton(
                 systemImage: service.isMicOn ? "mic.fill" : "mic.slash.fill",
-                background: service.isMicOn ? Color.white.opacity(0.2) : Color.red,
+                background: service.isMicOn ? Color.white.opacity(0.2) : Color.red
             ) {
                 Task { await service.toggleMicrophone() }
             }
 
             controlButton(
                 systemImage: service.isCameraOn ? "video.fill" : "video.slash.fill",
-                background: service.isCameraOn ? Color.white.opacity(0.2) : Color.red,
+                background: service.isCameraOn ? Color.white.opacity(0.2) : Color.red
             ) {
                 Task { await service.toggleCamera() }
             }
 
             controlButton(
                 systemImage: "phone.down.fill",
-                background: Color.red,
+                background: Color.red
             ) {
                 Task { await endCall() }
             }
@@ -138,7 +144,7 @@ struct VideoCallView: View {
         .background(
             LinearGradient(
                 colors: [Color.black.opacity(0), Color.black.opacity(0.6)],
-                startPoint: .top, endPoint: .bottom,
+                startPoint: .top, endPoint: .bottom
             )
             .ignoresSafeArea(edges: .bottom)
         )
@@ -159,7 +165,7 @@ struct VideoCallView: View {
     private func controlButton(
         systemImage: String,
         background: Color,
-        action: @escaping () -> Void,
+        action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)

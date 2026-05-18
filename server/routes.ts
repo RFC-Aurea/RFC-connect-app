@@ -45,7 +45,7 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   setupAuth(app);
-  const DEMO_EMAILS = ["batterywalaalifiya13@gmail.com", "alifiyab@rfcfertility.com"];
+  const DEMO_EMAILS = ["chimjimchimj@gmail.com", "alifiyab@rfcfertility.com"];
 
   const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,

@@ -15,7 +15,7 @@ struct IncomingCallView: View {
         ZStack {
             LinearGradient(
                 colors: [Color(hex: "1B4332"), Color(hex: "0A1F14")],
-                startPoint: .top, endPoint: .bottom,
+                startPoint: .top, endPoint: .bottom
             )
             .ignoresSafeArea()
 
@@ -33,7 +33,7 @@ struct IncomingCallView: View {
                         .scaleEffect(animatePulse ? 1.15 : 1.0)
                         .animation(
                             .easeInOut(duration: 1.2).repeatForever(autoreverses: true),
-                            value: animatePulse,
+                            value: animatePulse
                         )
                     Circle()
                         .fill(Color.white.opacity(0.18))
@@ -53,7 +53,7 @@ struct IncomingCallView: View {
                     callButton(
                         systemImage: "phone.down.fill",
                         background: .red,
-                        label: "Decline",
+                        label: "Decline"
                     ) {
                         stopRing()
                         onReject()
@@ -61,7 +61,7 @@ struct IncomingCallView: View {
                     callButton(
                         systemImage: "video.fill",
                         background: .green,
-                        label: "Accept",
+                        label: "Accept"
                     ) {
                         stopRing()
                         onAccept()
@@ -82,7 +82,7 @@ struct IncomingCallView: View {
         systemImage: String,
         background: Color,
         label: String,
-        action: @escaping () -> Void,
+        action: @escaping () -> Void
     ) -> some View {
         VStack(spacing: 10) {
             Button(action: action) {

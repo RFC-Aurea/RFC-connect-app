@@ -83,7 +83,7 @@ struct ChatView: View {
             }
             .alert("Video Call", isPresented: Binding(
                 get: { videoCallError != nil },
-                set: { if !$0 { videoCallError = nil } },
+                set: { if !$0 { videoCallError = nil } }
             )) {
                 Button("OK", role: .cancel) { videoCallError = nil }
             } message: {

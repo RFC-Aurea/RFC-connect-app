@@ -211,7 +211,6 @@ final class APIClient {
         let user: User
         let phase: String?
         let mentor: MentorSummary?
-        let resources: [Resource]?
         let assignmentId: Int?
     }
 

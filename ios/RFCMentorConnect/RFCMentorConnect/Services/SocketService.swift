@@ -44,7 +44,8 @@ final class SocketService: ObservableObject {
         socket?.on("message:received") { [weak self] data, _ in
             guard let self,
                   let raw = data.first as? [String: Any],
-                  let jsonData = try? JSONSerialization.data(withJSONObject: raw),
+                  let messageDict = raw["message"] as? [String: Any],
+                  let jsonData = try? JSONSerialization.data(withJSONObject: messageDict),
                   let message = try? JSONDecoder().decode(Message.self, from: jsonData) else { return }
             Task { @MainActor in
                 self.receivedMessage = message
@@ -52,12 +53,16 @@ final class SocketService: ObservableObject {
         }
 
         socket?.on("typing:start") { [weak self] data, _ in
-            guard let self, let userId = data.first as? Int else { return }
+            guard let self,
+                  let dict = data.first as? [String: Any],
+                  let userId = dict["userId"] as? Int else { return }
             Task { @MainActor in self.typingUserId = userId }
         }
 
         socket?.on("typing:stop") { [weak self] data, _ in
-            guard let self, let userId = data.first as? Int else { return }
+            guard let self,
+                  let dict = data.first as? [String: Any],
+                  let userId = dict["userId"] as? Int else { return }
             Task { @MainActor in
                 if self.typingUserId == userId { self.typingUserId = nil }
             }
@@ -77,7 +82,7 @@ final class SocketService: ObservableObject {
                         videoCallId: videoCallId,
                         roomUrl: roomUrl,
                         callerName: callerName,
-                        callerId: callerId,
+                        callerId: callerId
                     )
                 }
             }
@@ -117,15 +122,15 @@ final class SocketService: ObservableObject {
     }
 
     func sendMessage(to userId: Int, content: String) {
-        socket?.emit("message:send", ["receiverId": userId, "content": content])
+        socket?.emit("message:send", ["partnerId": userId, "content": content])
     }
 
     func startTyping(to userId: Int) {
-        socket?.emit("typing:start", ["receiverId": userId])
+        socket?.emit("typing:start", ["partnerId": userId])
     }
 
     func stopTyping(to userId: Int) {
-        socket?.emit("typing:stop", ["receiverId": userId])
+        socket?.emit("typing:stop", ["partnerId": userId])
     }
 
     func clearIncomingCall() { incomingCall = nil }
