@@ -271,7 +271,7 @@ struct ChatView: View {
                         .foregroundColor(Color(hex: "999999"))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(isMe ? Color(hex: "1B4332").opacity(0.5) : Color.white.opacity(0.6))
+                        .background(Color(hex: "E8E8E8"))
                         .cornerRadius(18)
                 } else {
                 switch message.messageType {
@@ -536,31 +536,37 @@ private struct VoiceBubble: View {
         playerManager.playingMessageId == messageId
     }
 
+    private var isPaused: Bool {
+        playerManager.pausedMessageId == messageId
+    }
+
+    private var isActive: Bool { isPlaying || isPaused }
+
     private var isThisDownloading: Bool {
         playerManager.downloadingMessageId == messageId
     }
 
     private var progress: Double {
-        guard playerManager.playingMessageId == messageId else { return 0 }
+        guard isActive else { return 0 }
         guard playerManager.duration > 0 else { return 0 }
         return playerManager.currentTime / playerManager.duration
     }
 
-    private var displayTime: String {
-        if isPlaying {
+    private var currentTimeDisplay: String {
+        if isActive {
             return formatSeconds(playerManager.currentTime)
         }
         if let dur = durationSeconds, dur > 0 {
             return formatSeconds(Double(dur))
         }
-        if playerManager.playingMessageId == messageId, playerManager.duration > 0 {
+        if playerManager.duration > 0 {
             return formatSeconds(playerManager.duration)
         }
         return "0:00"
     }
 
-    private var totalTime: String {
-        if playerManager.playingMessageId == messageId, playerManager.duration > 0 {
+    private var totalTimeDisplay: String {
+        if isActive, playerManager.duration > 0 {
             return formatSeconds(playerManager.duration)
         }
         if let dur = durationSeconds, dur > 0 {
@@ -635,12 +641,12 @@ private struct VoiceBubble: View {
 
                 // Time labels
                 HStack {
-                    Text(isPlaying ? displayTime : totalTime)
+                    Text(isActive ? currentTimeDisplay : totalTimeDisplay)
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .foregroundColor(dimColor)
                     Spacer()
-                    if isPlaying {
-                        Text(totalTime)
+                    if isActive {
+                        Text(totalTimeDisplay)
                             .font(.system(size: 11, weight: .medium, design: .monospaced))
                             .foregroundColor(dimColor)
                     }

@@ -397,6 +397,10 @@ struct MentorDetailView: View {
     let overview: AdminOverview?
     @Environment(\.dismiss) var dismiss
 
+    @State private var showDeleteConfirm = false
+    @State private var errorMessage = ""
+    @State private var showError = false
+
     var assignedPatients: [PatientSummary] {
         overview?.patients.filter { $0.mentorId == mentor.id } ?? []
     }
@@ -440,6 +444,13 @@ struct MentorDetailView: View {
                         }
                     }
                 }
+                Section {
+                    Button("Delete Account") { showDeleteConfirm = true }
+                        .font(.footnote)
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .listRowBackground(Color.clear)
+                }
             }
             .navigationTitle(mentor.name)
             .navigationBarTitleDisplayMode(.inline)
@@ -448,6 +459,29 @@ struct MentorDetailView: View {
                     Button("Done") { dismiss() }
                         .foregroundColor(Color(hex: "1B4332"))
                 }
+            }
+            .alert("Delete Account", isPresented: $showDeleteConfirm) {
+                Button("Delete", role: .destructive) { deleteAccount() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will unassign all patients from this mentor. Are you sure?")
+            }
+            .alert("Error", isPresented: $showError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
+        }
+    }
+
+    private func deleteAccount() {
+        Task {
+            do {
+                try await APIClient.shared.deleteUser(userId: mentor.id)
+                dismiss()
+            } catch {
+                errorMessage = error.localizedDescription
+                showError = true
             }
         }
     }

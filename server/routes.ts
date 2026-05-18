@@ -928,10 +928,25 @@ export async function registerRoutes(
         messageType: messageType ?? "text",
       });
 
-      // Link the pre-uploaded attachment to this message
+      // Link the pre-uploaded attachment to this message, then fetch it so we
+      // can include it in the broadcast/response — the iOS client reads fields
+      // like durationSeconds off message.attachment for voice bubbles.
+      let attachment: { id: number; url: string; fileName: string | null; type: string; durationSeconds: number | null } | null = null;
       if (attachmentId) {
         await storage.linkAttachmentToMessage(Number(attachmentId), message.id);
+        const a = await storage.getChatAttachment(Number(attachmentId));
+        if (a) {
+          attachment = {
+            id: a.id,
+            url: `/api/files/${a.id}`,
+            fileName: a.fileName,
+            type: a.type,
+            durationSeconds: a.durationSeconds,
+          };
+        }
       }
+
+      const messageWithAttachment = { ...message, attachment };
 
       // Broadcast to all sockets in the assignment room so the recipient
       // (and any other devices the sender is signed in on) gets the message
@@ -941,7 +956,7 @@ export async function registerRoutes(
       if (io && sender) {
         const { password: _pw, ...safeSender } = sender;
         io.to(`assignment:${assignment.id}`).emit("message:received", {
-          message,
+          message: messageWithAttachment,
           sender: safeSender,
         });
       }
@@ -959,7 +974,7 @@ export async function registerRoutes(
         }).catch(err => console.error("[apns] push failed:", err));
       }
 
-      return res.status(201).json(message);
+      return res.status(201).json(messageWithAttachment);
     } catch (err) { next(err); }
   });
 

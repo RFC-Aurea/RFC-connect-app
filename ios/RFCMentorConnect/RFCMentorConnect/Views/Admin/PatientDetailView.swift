@@ -132,16 +132,10 @@ struct PatientDetailView: View {
                             Text(errorMessage).font(.caption).foregroundColor(.red).padding(.horizontal, 16)
                         }
 
-                        Button(action: { showDeleteConfirm = true }) {
-                            Text("Delete Account")
-                                .font(.subheadline.bold())
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 44)
-                                .background(Color.red)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                        }
-                        .padding(.horizontal, 16)
+                        Button("Delete Account") { showDeleteConfirm = true }
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                            .padding(.top, 24)
                     }
                     .padding(.bottom, 24)
                 }
