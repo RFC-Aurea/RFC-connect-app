@@ -77,7 +77,7 @@ struct MentorDashboardView: View {
                 .padding(.horizontal, 16)
 
             ForEach(mentees) { mentee in
-                NavigationLink(destination: ChatView(partnerId: mentee.id, partnerName: mentee.name)) {
+                NavigationLink(destination: ChatView(partnerId: mentee.id, partnerName: mentee.name, partnerProfileImageUrl: mentee.profileImageUrl)) {
                     menteeCard(mentee: mentee)
                 }
             }
@@ -86,19 +86,23 @@ struct MentorDashboardView: View {
 
     private func menteeCard(mentee: PatientSummary) -> some View {
         HStack(spacing: 14) {
-            Circle()
-                .fill(Color(hex: "1B4332").opacity(0.15))
-                .frame(width: 48, height: 48)
-                .overlay(
-                    Text(mentee.name.prefix(1).uppercased())
-                        .font(.headline.bold())
-                        .foregroundColor(Color(hex: "1B4332"))
-                )
+            UserAvatar(name: mentee.name, profileImageUrl: mentee.profileImageUrl, size: 48)
 
             VStack(alignment: .leading, spacing: 3) {
-                Text(mentee.name)
-                    .font(.subheadline.bold())
-                    .foregroundColor(Color(hex: "1B4332"))
+                HStack(spacing: 8) {
+                    Text(mentee.name)
+                        .font(.subheadline.bold())
+                        .foregroundColor(Color(hex: "1B4332"))
+                    if let unread = mentee.unreadCount, unread > 0 {
+                        Text("\(unread)")
+                            .font(.caption2.bold())
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(Color.red)
+                            .clipShape(Capsule())
+                    }
+                }
                 if let phase = mentee.phase {
                     Text(phase)
                         .font(.caption)

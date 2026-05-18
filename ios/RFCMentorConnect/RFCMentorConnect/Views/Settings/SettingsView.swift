@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct SettingsView: View {
     @EnvironmentObject var auth: AuthService
@@ -10,14 +11,9 @@ struct SettingsView: View {
     @State private var isChangingPassword = false
     @State private var passwordError = ""
     @State private var passwordSuccess = false
-
-    private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
-    }
-
-    private var appBuild: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
-    }
+    @State private var photoPickerItem: PhotosPickerItem?
+    @State private var isUploadingPhoto = false
+    @State private var photoUploadError: String?
 
     var body: some View {
         NavigationStack {
@@ -28,14 +24,28 @@ struct SettingsView: View {
                     Section {
                         if let user = auth.currentUser {
                             HStack(spacing: 14) {
-                                Circle()
-                                    .fill(Color(hex: "1B4332").opacity(0.15))
-                                    .frame(width: 60, height: 60)
-                                    .overlay(
-                                        Text(user.name.prefix(1).uppercased())
-                                            .font(.title2.bold())
-                                            .foregroundColor(Color(hex: "1B4332"))
-                                    )
+                                PhotosPicker(selection: $photoPickerItem, matching: .images) {
+                                    ZStack {
+                                        UserAvatar(name: user.name, profileImageUrl: user.profileImageUrl, size: 60)
+                                        if isUploadingPhoto {
+                                            Circle()
+                                                .fill(Color.black.opacity(0.4))
+                                                .frame(width: 60, height: 60)
+                                            ProgressView().tint(.white)
+                                        } else {
+                                            Circle()
+                                                .fill(Color(hex: "1B4332"))
+                                                .frame(width: 20, height: 20)
+                                                .overlay(
+                                                    Image(systemName: "camera.fill")
+                                                        .font(.system(size: 10))
+                                                        .foregroundColor(.white)
+                                                )
+                                                .offset(x: 22, y: 22)
+                                        }
+                                    }
+                                }
+                                .buttonStyle(.plain)
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(user.name).font(.headline)
                                     Text(user.email).font(.caption).foregroundColor(Color(hex: "666666"))
@@ -76,20 +86,10 @@ struct SettingsView: View {
                     }
 
                     // About
-                    Section("About") {
-                        Text("RFC Mentor Connect pairs fertility patients with peer mentors for private, clinic-managed support throughout your treatment journey.")
-                            .font(.footnote)
-                            .foregroundColor(Color(hex: "444444"))
-                            .padding(.vertical, 4)
-                        HStack {
-                            Label("Version", systemImage: "info.circle")
-                            Spacer()
-                            Text(appVersion).foregroundColor(Color(hex: "666666"))
-                        }
-                        HStack {
-                            Label("Build", systemImage: "hammer")
-                            Spacer()
-                            Text(appBuild).foregroundColor(Color(hex: "666666"))
+                    Section {
+                        NavigationLink(destination: AboutView()) {
+                            Label("About", systemImage: "info.circle")
+                                .foregroundColor(Color(hex: "1B4332"))
                         }
                     }
 
@@ -117,6 +117,18 @@ struct SettingsView: View {
                 .scrollContentBackground(.hidden)
             }
             .navigationTitle("Settings")
+            .onChange(of: photoPickerItem) { item in
+                guard let item else { return }
+                uploadProfilePhoto(item: item)
+            }
+            .alert("Profile Photo", isPresented: Binding(
+                get: { photoUploadError != nil },
+                set: { if !$0 { photoUploadError = nil } }
+            )) {
+                Button("OK", role: .cancel) { photoUploadError = nil }
+            } message: {
+                Text(photoUploadError ?? "")
+            }
             .sheet(isPresented: $showChangePassword) {
                 changePasswordSheet
             }
@@ -194,6 +206,48 @@ struct SettingsView: View {
             } message: {
                 Text("Your password has been updated successfully.")
             }
+        }
+    }
+
+    private func uploadProfilePhoto(item: PhotosPickerItem) {
+        isUploadingPhoto = true
+        Task {
+            defer { isUploadingPhoto = false }
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self),
+                      let original = UIImage(data: data) else {
+                    photoUploadError = "Couldn't load that image"
+                    photoPickerItem = nil
+                    return
+                }
+                let resized = original.resizedForAvatar(maxDimension: 512)
+                guard let jpegData = resized.jpegData(compressionQuality: 0.85) else {
+                    photoUploadError = "Couldn't process that image"
+                    photoPickerItem = nil
+                    return
+                }
+                let response = try await APIClient.shared.uploadProfilePhoto(imageData: jpegData)
+                if var user = auth.currentUser {
+                    let updated = User(
+                        id: user.id,
+                        name: user.name,
+                        email: user.email,
+                        role: user.role,
+                        status: user.status,
+                        username: user.username,
+                        phone: user.phone,
+                        phoneVerified: user.phoneVerified,
+                        mustChangePassword: user.mustChangePassword,
+                        profileImageUrl: response.profileImageUrl,
+                        phase: user.phase,
+                        mentorId: user.mentorId
+                    )
+                    auth.currentUser = updated
+                }
+            } catch {
+                photoUploadError = "Couldn't upload photo: \(error.localizedDescription)"
+            }
+            photoPickerItem = nil
         }
     }
 

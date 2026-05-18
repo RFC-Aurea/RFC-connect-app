@@ -212,6 +212,7 @@ final class APIClient {
         let phase: String?
         let mentor: MentorSummary?
         let assignmentId: Int?
+        let unreadCount: Int?
     }
 
     func getPatientDashboard() async throws -> PatientDashboard {
@@ -242,6 +243,28 @@ final class APIClient {
 
     func reportMessage(messageId: Int, reason: String) async throws {
         _ = try await requestWithRetry("/api/reports", method: "POST", body: ["messageId": messageId, "reason": reason])
+    }
+
+    func deleteMessage(messageId: Int, scope: String) async throws {
+        _ = try await requestWithRetry("/api/messages/\(messageId)?scope=\(scope)", method: "DELETE")
+    }
+
+    func markMessageRead(messageId: Int) async throws {
+        _ = try await requestWithRetry("/api/messages/\(messageId)/read", method: "POST")
+    }
+
+    func markAllMessagesRead(partnerId: Int) async throws {
+        _ = try await requestWithRetry("/api/messages/read-all/\(partnerId)", method: "POST")
+    }
+
+    struct UnreadCounts: Codable {
+        let totalUnread: Int
+        let byPartner: [String: Int]
+    }
+
+    func getUnreadCounts() async throws -> UnreadCounts {
+        let data = try await requestWithRetry("/api/messages/unread-count")
+        return try decode(UnreadCounts.self, from: data)
     }
 
     // MARK: - Video Calls
@@ -357,5 +380,32 @@ final class APIClient {
             throw APIError.serverError(0, "Upload failed")
         }
         return try decode(UploadResponse.self, from: respData)
+    }
+
+    struct ProfilePhotoResponse: Codable {
+        let profileImageUrl: String
+    }
+
+    func uploadProfilePhoto(imageData: Data, fileName: String = "profile.jpg", mimeType: String = "image/jpeg") async throws -> ProfilePhotoResponse {
+        guard let url = URL(string: baseURL + "/api/auth/profile-photo") else { throw APIError.invalidURL }
+        let boundary = UUID().uuidString
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        if let token = KeychainHelper.shared.read(for: "accessToken") {
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        req.httpBody = body
+        let (respData, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw APIError.serverError(0, "Upload failed")
+        }
+        return try decode(ProfilePhotoResponse.self, from: respData)
     }
 }

@@ -4,11 +4,13 @@ struct Message: Codable, Identifiable, Equatable {
     let id: Int
     let senderId: Int
     let receiverId: Int
-    let content: String
+    var content: String
     let messageType: String
     let createdAt: String
     let attachment: ChatAttachment?
     var isFlagged: Bool?
+    var isDeleted: Bool?
+    var readAt: String?
 }
 
 struct ChatAttachment: Codable, Identifiable, Equatable {

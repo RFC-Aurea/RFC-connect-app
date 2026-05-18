@@ -58,6 +58,15 @@ export const messages = pgTable("messages", {
   receiverId: integer("receiver_id").notNull().references(() => users.id),
   content: text("content").notNull(),
   messageType: text("message_type").notNull().default("text"),
+  isDeleted: boolean("is_deleted").notNull().default(false),
+  readAt: timestamp("read_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const messageDeletions = pgTable("message_deletions", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  messageId: integer("message_id").notNull().references(() => messages.id),
+  userId: integer("user_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -142,6 +151,7 @@ export type RefreshToken = typeof refreshTokens.$inferSelect;
 export type MentorAssignment = typeof mentorAssignments.$inferSelect;
 export type PatientPhase = typeof patientPhases.$inferSelect;
 export type Message = typeof messages.$inferSelect;
+export type MessageDeletion = typeof messageDeletions.$inferSelect;
 export type Report = typeof reports.$inferSelect;
 export type Resource = typeof resources.$inferSelect;
 export type ChatAttachment = typeof chatAttachments.$inferSelect;

@@ -115,14 +115,7 @@ struct PatientDashboardView: View {
                 .foregroundColor(Color(hex: "666666"))
 
             HStack(spacing: 14) {
-                Circle()
-                    .fill(Color(hex: "1B4332").opacity(0.15))
-                    .frame(width: 52, height: 52)
-                    .overlay(
-                        Text(mentor.name.prefix(1).uppercased())
-                            .font(.title3.bold())
-                            .foregroundColor(Color(hex: "1B4332"))
-                    )
+                UserAvatar(name: mentor.name, profileImageUrl: mentor.profileImageUrl, size: 52)
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(mentor.name).font(.headline)
@@ -139,6 +132,15 @@ struct PatientDashboardView: View {
                     Image(systemName: "message.fill")
                     Text("Message")
                         .font(.subheadline.bold())
+                    if let unread = dashboard?.unreadCount, unread > 0 {
+                        Text("\(unread)")
+                            .font(.caption2.bold())
+                            .foregroundColor(.red)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(Color.white)
+                            .clipShape(Capsule())
+                    }
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)

@@ -17,6 +17,8 @@ struct PatientSummary: Codable, Identifiable {
     let username: String?
     let phoneVerified: Bool?
     let mustChangePassword: Bool?
+    let profileImageUrl: String?
+    let unreadCount: Int?
 }
 
 struct MentorSummary: Codable, Identifiable {
@@ -27,6 +29,7 @@ struct MentorSummary: Codable, Identifiable {
     let username: String?
     let phoneVerified: Bool?
     let mustChangePassword: Bool?
+    let profileImageUrl: String?
 }
 
 struct AdminSummary: Codable, Identifiable {

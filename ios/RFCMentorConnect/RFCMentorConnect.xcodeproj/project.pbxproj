@@ -37,6 +37,8 @@
 		AA000042 /* VideoCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100042 /* VideoCallView.swift */; };
 		AA000043 /* IncomingCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100043 /* IncomingCallView.swift */; };
 		AA000044 /* ScheduleCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100044 /* ScheduleCallView.swift */; };
+		AA000050 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100050 /* AboutView.swift */; };
+		AA000060 /* UserAvatar.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100060 /* UserAvatar.swift */; };
 		F856CC432FB63738004CBFAE /* Daily in Frameworks */ = {isa = PBXBuildFile; productRef = F856CC422FB63738004CBFAE /* Daily */; };
 		F856CC452FB63738004CBFAE /* DailySystemBroadcast in Frameworks */ = {isa = PBXBuildFile; productRef = F856CC442FB63738004CBFAE /* DailySystemBroadcast */; };
 		F8E1C01D2F6DCEA90063E454 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = AAPKG0001 /* SocketIO */; };
@@ -73,6 +75,8 @@
 		AA100042 /* VideoCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoCallView.swift; sourceTree = "<group>"; };
 		AA100043 /* IncomingCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncomingCallView.swift; sourceTree = "<group>"; };
 		AA100044 /* ScheduleCallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleCallView.swift; sourceTree = "<group>"; };
+		AA100050 /* AboutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AboutView.swift; sourceTree = "<group>"; };
+		AA100060 /* UserAvatar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserAvatar.swift; sourceTree = "<group>"; };
 		AAPROD001 /* RFCMentorConnect.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RFCMentorConnect.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F856CC462FB63A17004CBFAE /* RFCMentorConnect.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RFCMentorConnect.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -148,8 +152,17 @@
 				AAGROUP10 /* Journey */,
 				AAGROUP11 /* Settings */,
 				AAGROUP12 /* VideoCall */,
+				AAGROUP13 /* Components */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		AAGROUP13 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				AA100060 /* UserAvatar.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		AAGROUP05 /* Auth */ = {
@@ -211,6 +224,7 @@
 			isa = PBXGroup;
 			children = (
 				AA100022 /* SettingsView.swift */,
+				AA100050 /* AboutView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -335,6 +349,8 @@
 				AA000020 /* JourneyHubView.swift in Sources */,
 				AA000021 /* ResourceDetailView.swift in Sources */,
 				AA000022 /* SettingsView.swift in Sources */,
+				AA000050 /* AboutView.swift in Sources */,
+				AA000060 /* UserAvatar.swift in Sources */,
 				AA000040 /* VideoCallService.swift in Sources */,
 				AA000041 /* VideoCall.swift in Sources */,
 				AA000042 /* VideoCallView.swift in Sources */,

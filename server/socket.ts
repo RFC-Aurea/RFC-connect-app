@@ -40,6 +40,13 @@ interface ServerToClientEvents {
   }) => void;
   "video-call:ended": (data: { videoCallId: number }) => void;
   "video-call:rejected": (data: { videoCallId: number }) => void;
+  "video-call:reminder": (data: {
+    videoCallId: number;
+    roomUrl: string;
+    scheduledAt: string;
+  }) => void;
+  "message:deleted": (data: { messageId: number }) => void;
+  "message:read": (data: { messageId: number; readAt: string }) => void;
 }
 
 interface ClientToServerEvents {

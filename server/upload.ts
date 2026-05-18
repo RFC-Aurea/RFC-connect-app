@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import type { Readable } from "stream";
 import multer from "multer";
 import { randomUUID } from "crypto";
@@ -169,4 +169,25 @@ export async function getFileStream(
     stream: fs.createReadStream(localPath),
     contentType: mimeMap[ext] || "application/octet-stream",
   };
+}
+
+/**
+ * Delete a file from R2 (production) or local disk (dev) given its stored fileUrl.
+ * Best-effort — logs and swallows errors so a missing object never blocks
+ * the soft-delete of the parent message.
+ */
+export async function deleteFile(fileUrl: string): Promise<void> {
+  try {
+    if (storageEnabled && s3) {
+      const prefix = `https://${r2BucketName}.${r2AccountId}.r2.cloudflarestorage.com/`;
+      if (!fileUrl.startsWith(prefix)) return;
+      const key = fileUrl.slice(prefix.length);
+      await s3.send(new DeleteObjectCommand({ Bucket: r2BucketName!, Key: key }));
+      return;
+    }
+    const localPath = path.resolve(process.cwd(), fileUrl.replace(/^\//, ""));
+    if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
+  } catch (err) {
+    console.warn(`[upload] failed to delete file ${fileUrl}:`, err);
+  }
 }

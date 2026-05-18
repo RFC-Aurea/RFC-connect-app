@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import AudioToolbox
 
 final class ImageCache {
     static let shared = ImageCache()
@@ -14,6 +15,7 @@ struct ChatView: View {
 
     let partnerId: Int
     let partnerName: String
+    var partnerProfileImageUrl: String? = nil
 
     @State private var messages: [Message] = []
     @State private var messageText = ""
@@ -130,11 +132,26 @@ struct ChatView: View {
                             messageBubble(message: message)
                                 .id(message.id)
                                 .contextMenu {
-                                    Button(role: .destructive) {
-                                        reportedMessageId = message.id
-                                        showReportAlert = true
-                                    } label: {
-                                        Label("Report Message", systemImage: "flag")
+                                    if !(message.isDeleted ?? false) {
+                                        let isMine = message.senderId == auth.currentUser?.id
+                                        Button {
+                                            deleteMessage(message, scope: "me")
+                                        } label: {
+                                            Label("Delete for Me", systemImage: "trash")
+                                        }
+                                        if isMine {
+                                            Button(role: .destructive) {
+                                                deleteMessage(message, scope: "everyone")
+                                            } label: {
+                                                Label("Delete for Everyone", systemImage: "trash.fill")
+                                            }
+                                        }
+                                        Button(role: .destructive) {
+                                            reportedMessageId = message.id
+                                            showReportAlert = true
+                                        } label: {
+                                            Label("Report Message", systemImage: "flag")
+                                        }
                                     }
                                 }
                         }
@@ -154,7 +171,26 @@ struct ChatView: View {
                     guard let msg, msg.senderId == partnerId || msg.receiverId == partnerId else { return }
                     if !messages.contains(where: { $0.id == msg.id }) {
                         messages.append(msg)
+                        if msg.senderId == partnerId {
+                            AudioServicesPlaySystemSound(1007)
+                            Task { try? await APIClient.shared.markMessageRead(messageId: msg.id) }
+                        }
                     }
+                }
+                .onChange(of: socketService.deletedMessageId) { id in
+                    guard let id else { return }
+                    if let idx = messages.firstIndex(where: { $0.id == id }) {
+                        messages[idx].isDeleted = true
+                        messages[idx].content = "This message was deleted"
+                    }
+                    socketService.acknowledgeDeletedMessage()
+                }
+                .onChange(of: socketService.readMessage) { event in
+                    guard let event else { return }
+                    if let idx = messages.firstIndex(where: { $0.id == event.messageId }) {
+                        messages[idx].readAt = event.readAt
+                    }
+                    socketService.acknowledgeReadMessage()
                 }
             }
 
@@ -165,6 +201,12 @@ struct ChatView: View {
         .navigationTitle(partnerName)
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadMessages() }
+        .onAppear { socketService.activeChatPartnerId = partnerId }
+        .onDisappear {
+            if socketService.activeChatPartnerId == partnerId {
+                socketService.activeChatPartnerId = nil
+            }
+        }
         .sheet(isPresented: $showPhotoPicker) {
             AttachmentPickerView { data, name, mime in
                 Task { await uploadAndSend(data: data, fileName: name, mimeType: mime, type: "photo") }
@@ -219,9 +261,19 @@ struct ChatView: View {
 
     private func messageBubble(message: Message) -> some View {
         let isMe = message.senderId == auth.currentUser?.id
+        let isDeleted = message.isDeleted ?? false
         return HStack {
             if isMe { Spacer(minLength: 60) }
             VStack(alignment: isMe ? .trailing : .leading, spacing: 4) {
+                if isDeleted {
+                    Text("This message was deleted")
+                        .font(.body.italic())
+                        .foregroundColor(Color(hex: "999999"))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(isMe ? Color(hex: "1B4332").opacity(0.5) : Color.white.opacity(0.6))
+                        .cornerRadius(18)
+                } else {
                 switch message.messageType {
                 case "photo", "image":
                     let photoPath = message.attachment?.url ?? message.content
@@ -252,10 +304,18 @@ struct ChatView: View {
                         .foregroundColor(isMe ? .white : Color(hex: "1B4332"))
                         .cornerRadius(18)
                 }
-                Text(formatTime(message.createdAt))
-                    .font(.caption2)
-                    .foregroundColor(Color(hex: "666666"))
-                    .padding(.horizontal, 4)
+                }
+                HStack(spacing: 6) {
+                    Text(formatTime(message.createdAt))
+                        .font(.caption2)
+                        .foregroundColor(Color(hex: "666666"))
+                    if isMe && !isDeleted && message.readAt != nil {
+                        Text("Read")
+                            .font(.caption2)
+                            .foregroundColor(Color(hex: "999999"))
+                    }
+                }
+                .padding(.horizontal, 4)
             }
             if !isMe { Spacer(minLength: 60) }
         }
@@ -372,10 +432,30 @@ struct ChatView: View {
         }
     }
 
+    private func deleteMessage(_ message: Message, scope: String) {
+        let messageId = message.id
+        Task {
+            do {
+                try await APIClient.shared.deleteMessage(messageId: messageId, scope: scope)
+                if scope == "me" {
+                    messages.removeAll { $0.id == messageId }
+                } else {
+                    if let idx = messages.firstIndex(where: { $0.id == messageId }) {
+                        messages[idx].isDeleted = true
+                        messages[idx].content = "This message was deleted"
+                    }
+                }
+            } catch {
+                sendError = "Couldn't delete message: \(error.localizedDescription)"
+            }
+        }
+    }
+
     private func loadMessages() async {
         isLoading = true
         do {
             messages = try await APIClient.shared.getMessages(with: partnerId)
+            try? await APIClient.shared.markAllMessagesRead(partnerId: partnerId)
         } catch { print("Chat error: \(error)") }
         isLoading = false
     }

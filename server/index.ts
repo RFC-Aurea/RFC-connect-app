@@ -4,6 +4,7 @@ import { registerRoutes } from "./routes";
 import { initializeSocket } from "./socket";
 import { serveStatic } from "./static";
 import { storageEnabled } from "./upload";
+import { startScheduler } from "./scheduler";
 import { createServer } from "http";
 
 const app = express();
@@ -74,6 +75,7 @@ app.use((req, res, next) => {
   await seedResourcesIfEmpty();
   await registerRoutes(httpServer, app);
   initializeSocket(httpServer);
+  startScheduler();
 
   app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

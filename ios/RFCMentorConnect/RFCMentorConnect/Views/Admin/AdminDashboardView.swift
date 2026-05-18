@@ -226,14 +226,13 @@ struct AdminDashboardView: View {
 
     private func patientRow(patient: PatientSummary) -> some View {
         HStack(spacing: 14) {
-            Circle()
-                .fill(patient.mentorId == nil ? Color.red.opacity(0.15) : Color(hex: "2E7D32").opacity(0.15))
-                .frame(width: 40, height: 40)
-                .overlay(
-                    Text(patient.name.prefix(1).uppercased())
-                        .font(.subheadline.bold())
-                        .foregroundColor(patient.mentorId == nil ? .red : Color(hex: "2E7D32"))
-                )
+            UserAvatar(
+                name: patient.name,
+                profileImageUrl: patient.profileImageUrl,
+                size: 40,
+                backgroundColor: patient.mentorId == nil ? Color.red.opacity(0.15) : Color(hex: "2E7D32").opacity(0.15),
+                foregroundColor: patient.mentorId == nil ? .red : Color(hex: "2E7D32")
+            )
             VStack(alignment: .leading, spacing: 2) {
                 Text(patient.name)
                     .font(.subheadline.bold())
@@ -248,7 +247,7 @@ struct AdminDashboardView: View {
                     .foregroundColor(patient.mentorId == nil ? .red : .secondary)
             }
             Spacer()
-            statusBadge(status: patient.status)
+            statusBadge(status: patient.status, phoneVerified: patient.phoneVerified, mustChangePassword: patient.mustChangePassword)
             Image(systemName: "chevron.right")
                 .font(.caption2)
                 .foregroundColor(Color(hex: "666666"))
@@ -272,14 +271,13 @@ struct AdminDashboardView: View {
     private func mentorRow(mentor: MentorSummary) -> some View {
         let onboarded = (mentor.phoneVerified ?? false) && !(mentor.mustChangePassword ?? true)
         return HStack(spacing: 14) {
-            Circle()
-                .fill(Color(hex: "B8860B").opacity(0.15))
-                .frame(width: 40, height: 40)
-                .overlay(
-                    Text(mentor.name.prefix(1).uppercased())
-                        .font(.subheadline.bold())
-                        .foregroundColor(Color(hex: "B8860B"))
-                )
+            UserAvatar(
+                name: mentor.name,
+                profileImageUrl: mentor.profileImageUrl,
+                size: 40,
+                backgroundColor: Color(hex: "B8860B").opacity(0.15),
+                foregroundColor: Color(hex: "B8860B")
+            )
             VStack(alignment: .leading, spacing: 2) {
                 Text(mentor.name)
                     .font(.subheadline.bold())
@@ -291,7 +289,7 @@ struct AdminDashboardView: View {
             Image(systemName: onboarded ? "checkmark.circle.fill" : "clock.fill")
                 .foregroundColor(onboarded ? .green : .orange)
                 .font(.subheadline)
-            statusBadge(status: mentor.status)
+            statusBadge(status: mentor.status, phoneVerified: mentor.phoneVerified, mustChangePassword: mentor.mustChangePassword)
             Image(systemName: "chevron.right")
                 .font(.caption2)
                 .foregroundColor(Color(hex: "666666"))
@@ -317,14 +315,13 @@ struct AdminDashboardView: View {
 
     private func adminRow(admin: AdminSummary) -> some View {
         HStack(spacing: 14) {
-            Circle()
-                .fill(Color(hex: "5C35A0").opacity(0.15))
-                .frame(width: 40, height: 40)
-                .overlay(
-                    Text(admin.name.prefix(1).uppercased())
-                        .font(.subheadline.bold())
-                        .foregroundColor(Color(hex: "5C35A0"))
-                )
+            UserAvatar(
+                name: admin.name,
+                profileImageUrl: nil,
+                size: 40,
+                backgroundColor: Color(hex: "5C35A0").opacity(0.15),
+                foregroundColor: Color(hex: "5C35A0")
+            )
             VStack(alignment: .leading, spacing: 2) {
                 Text(admin.name)
                     .font(.subheadline.bold())
@@ -341,9 +338,13 @@ struct AdminDashboardView: View {
 
     // MARK: - Status Badge
 
-    private func statusBadge(status: String) -> some View {
-        let color: Color = status == "active" ? .green : status == "inactive" ? .red : .orange
-        return Text(status.capitalized)
+    private func statusBadge(status: String, phoneVerified: Bool? = nil, mustChangePassword: Bool? = nil) -> some View {
+        // Display-only override: onboarded users (phone verified + temp password replaced)
+        // show as "Active" even if the DB still has them as "pending".
+        let isOnboarded = (phoneVerified ?? false) && !(mustChangePassword ?? true)
+        let effectiveStatus = (status == "pending" && isOnboarded) ? "active" : status
+        let color: Color = effectiveStatus == "active" ? .green : effectiveStatus == "inactive" ? .red : .orange
+        return Text(effectiveStatus.capitalized)
             .font(.caption2.bold())
             .padding(.horizontal, 6)
             .padding(.vertical, 3)
@@ -404,13 +405,17 @@ struct MentorDetailView: View {
         (mentor.phoneVerified ?? false) && !(mentor.mustChangePassword ?? true)
     }
 
+    var displayStatus: String {
+        (mentor.status == "pending" && onboarded) ? "active" : mentor.status
+    }
+
     var body: some View {
         NavigationStack {
             List {
                 Section("Details") {
                     LabeledContent("Email", value: mentor.email)
                     LabeledContent("Username", value: mentor.username ?? "—")
-                    LabeledContent("Status", value: mentor.status.capitalized)
+                    LabeledContent("Status", value: displayStatus.capitalized)
                     LabeledContent("Onboarding") {
                         Label(
                             onboarded ? "Complete" : "Pending",

@@ -62,6 +62,27 @@ final class PushNotificationService: NSObject, ObservableObject {
             }
         }
     }
+
+    func refreshBadgeCount() {
+        guard KeychainHelper.shared.read(for: "accessToken") != nil else {
+            UIApplication.shared.applicationIconBadgeNumber = 0
+            return
+        }
+        Task {
+            do {
+                let counts = try await APIClient.shared.getUnreadCounts()
+                await MainActor.run {
+                    UIApplication.shared.applicationIconBadgeNumber = counts.totalUnread
+                }
+            } catch {
+                print("[Push] Failed to refresh badge count: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func clearBadge() {
+        UIApplication.shared.applicationIconBadgeNumber = 0
+    }
 }
 
 extension PushNotificationService: UNUserNotificationCenterDelegate {
@@ -93,6 +114,16 @@ extension PushNotificationService: UNUserNotificationCenterDelegate {
                     videoCallId: videoCallId,
                     roomUrl: roomUrl,
                     callerName: callerName
+                )
+            }
+        } else if let type = userInfo["type"] as? String,
+                  type == "video_call_reminder",
+                  let videoCallId = userInfo["videoCallId"] as? Int,
+                  let roomUrl = userInfo["roomUrl"] as? String {
+            Task { @MainActor in
+                SocketService.shared.callReminder = CallReminder(
+                    videoCallId: videoCallId,
+                    roomUrl: roomUrl
                 )
             }
         }

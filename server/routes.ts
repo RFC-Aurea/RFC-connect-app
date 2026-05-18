@@ -20,6 +20,7 @@ import {
   upload,
   uploadFile,
   getFileStream,
+  deleteFile,
   storageEnabled,
   ALLOWED_MIMES,
   maxSizeForType,
@@ -28,7 +29,9 @@ import {
 import { getIO } from "./socket";
 import { sendPushNotification } from "./apns";
 import { createDailyRoom, deleteDailyRoom, dailyEnabled } from "./daily";
-import { TREATMENT_PHASES } from "../shared/schema";
+import { TREATMENT_PHASES, messages } from "../shared/schema";
+import { db } from "./db";
+import { and, eq, isNull } from "drizzle-orm";
 
 function previewForMessage(content: string, messageType: string): string {
   switch (messageType) {
@@ -378,6 +381,51 @@ export async function registerRoutes(
   });
 
   app.post(
+    "/api/auth/profile-photo",
+    requireAuth,
+    upload.single("file"),
+    async (req, res, next) => {
+      try {
+        if (!req.file) {
+          res.status(400).json({ message: "No file provided" });
+          return;
+        }
+        if (!ALLOWED_MIMES.photo.includes(req.file.mimetype)) {
+          res.status(400).json({
+            message: `MIME type '${req.file.mimetype}' is not a supported image format`,
+          });
+          return;
+        }
+        if (req.file.size > maxSizeForType("photo")) {
+          res.status(400).json({
+            message: `Image too large. Max: ${maxSizeForType("photo") / 1024 / 1024} MB`,
+          });
+          return;
+        }
+
+        const fileUrl = await uploadFile(
+          req.file.buffer,
+          req.file.originalname,
+          req.file.mimetype,
+          "photo",
+        );
+
+        const attachment = await storage.createChatAttachment({
+          type: "photo",
+          fileUrl,
+          fileName: req.file.originalname,
+          fileSize: req.file.size,
+        });
+
+        const profileImageUrl = `/api/files/${attachment.id}`;
+        await storage.updateUser(req.user!.id, { profileImageUrl });
+
+        res.json({ profileImageUrl });
+      } catch (err) { next(err); }
+    },
+  );
+
+  app.post(
     "/api/upload",
     requireAuth,
     upload.single("file"),
@@ -452,16 +500,15 @@ export async function registerRoutes(
         return;
       }
 
-      // Verify the requesting user is sender/receiver of the linked message, or is admin
+      // Verify the requesting user is sender/receiver of the linked message, or is admin.
+      // Attachments without a messageId are profile photos — any authenticated user may view.
       if (req.user!.role !== "admin") {
-        if (!attachment.messageId) {
-          res.status(403).json({ message: "Access denied" });
-          return;
-        }
-        const msg = await storage.getMessage(attachment.messageId);
-        if (msg && msg.senderId !== req.user!.id && msg.receiverId !== req.user!.id) {
-          res.status(403).json({ message: "Access denied" });
-          return;
+        if (attachment.messageId) {
+          const msg = await storage.getMessage(attachment.messageId);
+          if (msg && msg.senderId !== req.user!.id && msg.receiverId !== req.user!.id) {
+            res.status(403).json({ message: "Access denied" });
+            return;
+          }
         }
       }
 
@@ -525,11 +572,13 @@ export async function registerRoutes(
       const phase = await storage.getPatientPhase(userId);
       const assignments = await storage.getAssignmentsByPatient(userId);
       let mentor = null;
+      let unreadCount = 0;
       if (assignments.length > 0) {
         const mentorUser = await storage.getUser(assignments[0].mentorId);
         if (mentorUser) {
           const { password, ...safeMentor } = mentorUser;
           mentor = safeMentor;
+          unreadCount = await storage.getUnreadCountFromPartner(userId, mentorUser.id);
         }
       }
       const { password, ...safeUser } = req.user!;
@@ -538,20 +587,28 @@ export async function registerRoutes(
         phase: phase?.currentPhase || "Pre-Consult & Decision",
         mentor,
         assignmentId: assignments[0]?.id || null,
+        unreadCount,
       });
     } catch (err) { next(err); }
   });
 
   app.get("/api/mentor/mentees", requireRole("mentor"), async (req, res, next) => {
     try {
-      const assignments = await storage.getAssignmentsByMentor(req.user!.id);
+      const mentorId = req.user!.id;
+      const assignments = await storage.getAssignmentsByMentor(mentorId);
       const mentees = await Promise.all(
         assignments.map(async (a) => {
           const user = await storage.getUser(a.patientId);
           const phase = await storage.getPatientPhase(a.patientId);
           if (!user) return null;
           const { password, ...safeUser } = user;
-          return { ...safeUser, phase: phase?.currentPhase || "Pre-Consult & Decision", assignmentId: a.id };
+          const unreadCount = await storage.getUnreadCountFromPartner(mentorId, a.patientId);
+          return {
+            ...safeUser,
+            phase: phase?.currentPhase || "Pre-Consult & Decision",
+            assignmentId: a.id,
+            unreadCount,
+          };
         })
       );
       return res.json(mentees.filter(Boolean));
@@ -560,12 +617,23 @@ export async function registerRoutes(
 
   app.get("/api/admin/overview", requireRole("admin"), async (req, res, next) => {
     try {
-      const [patients, mentors, admins, assignments] = await Promise.all([
+      const [patientsRaw, mentorsRaw, admins, assignments] = await Promise.all([
         storage.getUsersByRole("patient"),
         storage.getUsersByRole("mentor"),
         storage.getUsersByRole("admin"),
         storage.getAllAssignments(),
       ]);
+
+      // Self-healing: activate users who completed onboarding but are still marked pending.
+      const healIfNeeded = async <T extends { id: number; status: string; phoneVerified: boolean; mustChangePassword: boolean }>(u: T): Promise<T> => {
+        if (u.phoneVerified === true && u.mustChangePassword === false && u.status === "pending") {
+          await storage.updateUser(u.id, { status: "active" });
+          return { ...u, status: "active" };
+        }
+        return u;
+      };
+      const patients = await Promise.all(patientsRaw.map(healIfNeeded));
+      const mentors = await Promise.all(mentorsRaw.map(healIfNeeded));
 
       const patientsWithPhase = await Promise.all(
         patients.map(async (p) => {
@@ -645,6 +713,90 @@ export async function registerRoutes(
     } catch (err) { next(err); }
   });
 
+  app.get("/api/messages/unread-count", requireAuth, async (req, res, next) => {
+    try {
+      const result = await storage.getUnreadCountForUser(req.user!.id);
+      return res.json(result);
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/messages/:messageId/read", requireAuth, async (req, res, next) => {
+    try {
+      const messageId = parseInt(req.params.messageId as string);
+      if (Number.isNaN(messageId)) {
+        return res.status(400).json({ message: "Invalid messageId" });
+      }
+      const message = await storage.getMessage(messageId);
+      if (!message) return res.status(404).json({ message: "Message not found" });
+      if (message.receiverId !== req.user!.id) {
+        return res.status(403).json({ message: "Only the recipient can mark a message as read" });
+      }
+      if (message.readAt) {
+        return res.json({ success: true });
+      }
+      const updated = await storage.markMessageRead(messageId);
+      if (!updated) return res.json({ success: true });
+
+      const senderAssignments = await storage.getAssignmentsByMentor(req.user!.id);
+      const patientAssignments = await storage.getAssignmentsByPatient(req.user!.id);
+      const assignment = [...senderAssignments, ...patientAssignments].find(
+        a => a.mentorId === message.senderId || a.patientId === message.senderId,
+      );
+      const io = getIO();
+      if (io && assignment && updated.readAt) {
+        io.to(`assignment:${assignment.id}`).emit("message:read", {
+          messageId,
+          readAt: updated.readAt.toISOString(),
+        });
+      }
+      return res.json({ success: true });
+    } catch (err) { next(err); }
+  });
+
+  app.post("/api/messages/read-all/:partnerId", requireAuth, async (req, res, next) => {
+    try {
+      const partnerId = parseInt(req.params.partnerId as string);
+      if (Number.isNaN(partnerId)) {
+        return res.status(400).json({ message: "Invalid partnerId" });
+      }
+      const userId = req.user!.id;
+
+      const unreadBefore = await db
+        .select({ id: messages.id })
+        .from(messages)
+        .where(
+          and(
+            eq(messages.receiverId, userId),
+            eq(messages.senderId, partnerId),
+            isNull(messages.readAt),
+            eq(messages.isDeleted, false),
+          ),
+        );
+
+      await storage.markAllMessagesRead(userId, partnerId);
+
+      if (unreadBefore.length > 0) {
+        const senderAssignments = await storage.getAssignmentsByMentor(userId);
+        const patientAssignments = await storage.getAssignmentsByPatient(userId);
+        const assignment = [...senderAssignments, ...patientAssignments].find(
+          a => a.mentorId === partnerId || a.patientId === partnerId,
+        );
+        const io = getIO();
+        if (io && assignment) {
+          const readAtIso = new Date().toISOString();
+          for (const row of unreadBefore) {
+            io.to(`assignment:${assignment.id}`).emit("message:read", {
+              messageId: row.id,
+              readAt: readAtIso,
+            });
+          }
+        }
+      }
+
+      return res.json({ success: true, marked: unreadBefore.length });
+    } catch (err) { next(err); }
+  });
+
   app.get("/api/messages/:partnerId", requireAuth, async (req, res, next) => {
     try {
       const partnerId = parseInt(req.params.partnerId as string);
@@ -665,9 +817,19 @@ export async function registerRoutes(
 
       const msgs = await storage.getMessages(userId, partnerId);
 
-      // For non-text messages attach the first chat_attachment record
+      // Hide messages the current user deleted "for me" — keep them in the DB
+      // so the other side can still see them.
+      const hiddenForMe = new Set(await storage.getMessageDeletionsForUser(userId));
+      const visibleMsgs = msgs.filter(m => !hiddenForMe.has(m.id));
+
+      // For non-text messages attach the first chat_attachment record.
+      // For deleted messages, replace content with the tombstone string and skip
+      // the attachment lookup (the file is already gone).
       const messagesWithAttachments = await Promise.all(
-        msgs.map(async (msg) => {
+        visibleMsgs.map(async (msg) => {
+          if (msg.isDeleted) {
+            return { ...msg, content: "This message was deleted", attachment: null };
+          }
           if (msg.messageType === "text") return { ...msg, attachment: null };
           const attachments = await storage.getChatAttachmentsByMessage(msg.id);
           const a = attachments[0] ?? null;
@@ -681,6 +843,60 @@ export async function registerRoutes(
       );
 
       return res.json(messagesWithAttachments);
+    } catch (err) { next(err); }
+  });
+
+  app.delete("/api/messages/:messageId", requireAuth, async (req, res, next) => {
+    try {
+      const messageId = parseInt(req.params.messageId as string);
+      if (Number.isNaN(messageId)) {
+        return res.status(400).json({ message: "Invalid messageId" });
+      }
+      const scope = (req.query.scope as string) ?? "me";
+      if (scope !== "me" && scope !== "everyone") {
+        return res.status(400).json({ message: "scope must be 'me' or 'everyone'" });
+      }
+
+      const message = await storage.getMessage(messageId);
+      if (!message) return res.status(404).json({ message: "Message not found" });
+
+      const userId = req.user!.id;
+      // Only sender or receiver may delete a message for themselves.
+      if (message.senderId !== userId && message.receiverId !== userId) {
+        return res.status(403).json({ message: "Not your conversation" });
+      }
+
+      if (scope === "me") {
+        await storage.createMessageDeletion(messageId, userId);
+        return res.json({ success: true });
+      }
+
+      // scope === "everyone"
+      if (message.senderId !== userId) {
+        return res.status(403).json({ message: "You can only delete your own messages for everyone" });
+      }
+
+      // Delete the attachment file from R2 (best-effort) before flipping the flag.
+      const attachments = await storage.getChatAttachmentsByMessage(messageId);
+      for (const att of attachments) {
+        await deleteFile(att.fileUrl);
+      }
+
+      await storage.softDeleteMessage(messageId);
+
+      // Notify both sides over the assignment room so the UI can re-render.
+      const senderAssignments = await storage.getAssignmentsByMentor(userId);
+      const patientAssignments = await storage.getAssignmentsByPatient(userId);
+      const partnerId = message.senderId === userId ? message.receiverId : message.senderId;
+      const assignment = [...senderAssignments, ...patientAssignments].find(
+        a => a.mentorId === partnerId || a.patientId === partnerId,
+      );
+      const io = getIO();
+      if (io && assignment) {
+        io.to(`assignment:${assignment.id}`).emit("message:deleted", { messageId });
+      }
+
+      return res.json({ success: true });
     } catch (err) { next(err); }
   });
 

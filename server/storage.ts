@@ -1,12 +1,13 @@
-import { eq, and, or, desc, inArray } from "drizzle-orm";
+import { eq, and, or, desc, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "./db";
 import {
-  users, mentorAssignments, patientPhases, messages, reports, resources, refreshTokens,
+  users, mentorAssignments, patientPhases, messages, messageDeletions, reports, resources, refreshTokens,
   notifications, auditLog, chatAttachments, videoCalls,
   type User, type InsertUser,
   type MentorAssignment, type InsertMentorAssignment,
   type PatientPhase, type InsertPatientPhase,
   type Message, type InsertMessage,
+  type MessageDeletion,
   type Report, type InsertReport,
   type Resource, type InsertResource,
   type RefreshToken, type InsertRefreshToken,
@@ -36,6 +37,13 @@ export interface IStorage {
   getMessage(id: number): Promise<Message | undefined>;
   getMessages(userId1: number, userId2: number): Promise<Message[]>;
   createMessage(message: InsertMessage): Promise<Message>;
+  softDeleteMessage(messageId: number): Promise<void>;
+  createMessageDeletion(messageId: number, userId: number): Promise<MessageDeletion>;
+  getMessageDeletionsForUser(userId: number): Promise<number[]>;
+  markMessageRead(messageId: number): Promise<Message | undefined>;
+  markAllMessagesRead(recipientId: number, senderId: number): Promise<void>;
+  getUnreadCountForUser(userId: number): Promise<{ totalUnread: number; byPartner: Record<number, number> }>;
+  getUnreadCountFromPartner(recipientId: number, senderId: number): Promise<number>;
 
   createReport(report: InsertReport): Promise<Report>;
   getReports(): Promise<Report[]>;
@@ -107,9 +115,13 @@ export class DatabaseStorage implements IStorage {
 
       // Reports: by this user, or referencing messages we're about to delete
       await tx.delete(reports).where(eq(reports.reportedBy, id));
+      // Drop any message_deletion rows authored by this user — the messages they
+      // reference may still exist (sent by other users).
+      await tx.delete(messageDeletions).where(eq(messageDeletions.userId, id));
       if (messageIds.length > 0) {
         await tx.delete(reports).where(inArray(reports.messageId, messageIds));
         await tx.delete(chatAttachments).where(inArray(chatAttachments.messageId, messageIds));
+        await tx.delete(messageDeletions).where(inArray(messageDeletions.messageId, messageIds));
         await tx.delete(messages).where(inArray(messages.id, messageIds));
       }
 
@@ -223,6 +235,89 @@ export class DatabaseStorage implements IStorage {
   async createMessage(message: InsertMessage): Promise<Message> {
     const [created] = await db.insert(messages).values(message).returning();
     return created;
+  }
+
+  async softDeleteMessage(messageId: number): Promise<void> {
+    await db.update(messages).set({ isDeleted: true }).where(eq(messages.id, messageId));
+  }
+
+  async createMessageDeletion(messageId: number, userId: number): Promise<MessageDeletion> {
+    const [created] = await db
+      .insert(messageDeletions)
+      .values({ messageId, userId })
+      .returning();
+    return created;
+  }
+
+  async getMessageDeletionsForUser(userId: number): Promise<number[]> {
+    const rows = await db
+      .select({ messageId: messageDeletions.messageId })
+      .from(messageDeletions)
+      .where(eq(messageDeletions.userId, userId));
+    return rows.map(r => r.messageId);
+  }
+
+  async markMessageRead(messageId: number): Promise<Message | undefined> {
+    const [updated] = await db
+      .update(messages)
+      .set({ readAt: new Date() })
+      .where(and(eq(messages.id, messageId), isNull(messages.readAt)))
+      .returning();
+    return updated;
+  }
+
+  async markAllMessagesRead(recipientId: number, senderId: number): Promise<void> {
+    await db
+      .update(messages)
+      .set({ readAt: new Date() })
+      .where(
+        and(
+          eq(messages.receiverId, recipientId),
+          eq(messages.senderId, senderId),
+          isNull(messages.readAt),
+          eq(messages.isDeleted, false),
+        ),
+      );
+  }
+
+  async getUnreadCountForUser(userId: number): Promise<{ totalUnread: number; byPartner: Record<number, number> }> {
+    const rows = await db
+      .select({
+        senderId: messages.senderId,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.receiverId, userId),
+          isNull(messages.readAt),
+          eq(messages.isDeleted, false),
+        ),
+      )
+      .groupBy(messages.senderId);
+
+    const byPartner: Record<number, number> = {};
+    let totalUnread = 0;
+    for (const row of rows) {
+      byPartner[row.senderId] = Number(row.count);
+      totalUnread += Number(row.count);
+    }
+    return { totalUnread, byPartner };
+  }
+
+  async getUnreadCountFromPartner(recipientId: number, senderId: number): Promise<number> {
+    const [row] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.receiverId, recipientId),
+          eq(messages.senderId, senderId),
+          isNull(messages.readAt),
+          eq(messages.isDeleted, false),
+        ),
+      );
+    return Number(row?.count ?? 0);
   }
 
   async createReport(report: InsertReport): Promise<Report> {
