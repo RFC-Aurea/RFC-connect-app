@@ -15,12 +15,28 @@ struct AdminDashboardView: View {
     @State private var pendingDeleteName: String = ""
     @State private var pendingDeleteMessage: String = ""
 
+    private func isVisible(_ status: String) -> Bool {
+        status == "active" || status == "pending"
+    }
+
+    var visiblePatients: [PatientSummary] {
+        (overview?.patients ?? []).filter { isVisible($0.status) }
+    }
+
+    var visibleMentors: [MentorSummary] {
+        (overview?.mentors ?? []).filter { isVisible($0.status) }
+    }
+
+    var visibleAdmins: [AdminSummary] {
+        (overview?.admins ?? []).filter { isVisible($0.status) }
+    }
+
     var unassignedPatients: [PatientSummary] {
-        overview?.patients.filter { $0.mentorId == nil } ?? []
+        visiblePatients.filter { $0.mentorId == nil && $0.status == "active" }
     }
 
     var totalUsers: Int {
-        (overview?.patients.count ?? 0) + (overview?.mentors.count ?? 0) + (overview?.admins?.count ?? 0)
+        visiblePatients.count + visibleMentors.count + visibleAdmins.count
     }
 
     func mentorName(for mentorId: Int?) -> String {
@@ -57,9 +73,9 @@ struct AdminDashboardView: View {
                             // Stats row
                             HStack(spacing: 10) {
                                 statCard(value: "\(totalUsers)", label: "Total", color: Color(hex: "1B4332"))
-                                statCard(value: "\(overview?.patients.count ?? 0)", label: "Patients", color: Color(hex: "2E7D32"))
-                                statCard(value: "\(overview?.mentors.count ?? 0)", label: "Mentors", color: Color(hex: "B8860B"))
-                                statCard(value: "\(overview?.admins?.count ?? 0)", label: "Admins", color: Color(hex: "5C35A0"))
+                                statCard(value: "\(visiblePatients.count)", label: "Patients", color: Color(hex: "2E7D32"))
+                                statCard(value: "\(visibleMentors.count)", label: "Mentors", color: Color(hex: "B8860B"))
+                                statCard(value: "\(visibleAdmins.count)", label: "Admins", color: Color(hex: "5C35A0"))
                             }
                             .padding(.horizontal, 16)
 
@@ -77,12 +93,12 @@ struct AdminDashboardView: View {
                             }
 
                             // Patients section
-                            if let patients = overview?.patients, !patients.isEmpty {
-                                sectionCard(title: "Patients", count: patients.count, accentColor: Color(hex: "2E7D32")) {
-                                    ForEach(patients) { patient in
+                            if !visiblePatients.isEmpty {
+                                sectionCard(title: "Patients", count: visiblePatients.count, accentColor: Color(hex: "2E7D32")) {
+                                    ForEach(visiblePatients) { patient in
                                         patientRow(patient: patient)
                                             .onTapGesture { selectedPatient = patient }
-                                        if patient.id != patients.last?.id {
+                                        if patient.id != visiblePatients.last?.id {
                                             Divider().padding(.leading, 58)
                                         }
                                     }
@@ -90,12 +106,12 @@ struct AdminDashboardView: View {
                             }
 
                             // Mentors section
-                            if let mentors = overview?.mentors, !mentors.isEmpty {
-                                sectionCard(title: "Mentors", count: mentors.count, accentColor: Color(hex: "B8860B")) {
-                                    ForEach(mentors) { mentor in
+                            if !visibleMentors.isEmpty {
+                                sectionCard(title: "Mentors", count: visibleMentors.count, accentColor: Color(hex: "B8860B")) {
+                                    ForEach(visibleMentors) { mentor in
                                         mentorRow(mentor: mentor)
                                             .onTapGesture { selectedMentor = mentor }
-                                        if mentor.id != mentors.last?.id {
+                                        if mentor.id != visibleMentors.last?.id {
                                             Divider().padding(.leading, 58)
                                         }
                                     }
@@ -103,11 +119,11 @@ struct AdminDashboardView: View {
                             }
 
                             // Admins section
-                            if let admins = overview?.admins, !admins.isEmpty {
-                                sectionCard(title: "Admins", count: admins.count, accentColor: Color(hex: "5C35A0")) {
-                                    ForEach(admins) { admin in
+                            if !visibleAdmins.isEmpty {
+                                sectionCard(title: "Admins", count: visibleAdmins.count, accentColor: Color(hex: "5C35A0")) {
+                                    ForEach(visibleAdmins) { admin in
                                         adminRow(admin: admin)
-                                        if admin.id != admins.last?.id {
+                                        if admin.id != visibleAdmins.last?.id {
                                             Divider().padding(.leading, 58)
                                         }
                                     }
@@ -284,7 +300,7 @@ struct AdminDashboardView: View {
         .padding(.vertical, 10)
         .contextMenu {
             Button(role: .destructive) {
-                let assignedCount = overview?.patients.filter { $0.mentorId == mentor.id }.count ?? 0
+                let assignedCount = visiblePatients.filter { $0.mentorId == mentor.id }.count
                 pendingDeleteId = mentor.id
                 pendingDeleteName = mentor.name
                 pendingDeleteMessage = assignedCount > 0

@@ -1132,25 +1132,20 @@ export async function registerRoutes(
       const target = await storage.getUser(targetId);
       if (!target) return res.status(404).json({ message: "User not found" });
       if (targetId === req.user!.id) {
-        return res.status(400).json({ message: "Cannot deactivate your own account" });
+        return res.status(400).json({ message: "Cannot delete your own account" });
       }
 
-      // Remove all mentor assignments involving this user before deactivating
-      await storage.deleteAssignmentsByUserId(targetId);
-
-      // Revoke all refresh tokens so the user can't continue using existing sessions
-      await storage.deleteRefreshTokensByUserId(targetId);
-
-      await storage.updateUser(targetId, { status: "inactive" });
+      const targetEmail = target.email;
+      await storage.deleteUser(targetId, req.user!.id);
 
       await storage.createAuditLog({
         actorId: req.user!.id,
-        action: "deactivate_user",
-        targetId,
-        details: `Deactivated user ${target.email}`,
+        action: "delete_user",
+        targetId: null,
+        details: `Deleted user ${targetEmail}`,
       });
 
-      return res.json({ message: "User deactivated" });
+      return res.json({ message: "User deleted" });
     } catch (err) { next(err); }
   });
 

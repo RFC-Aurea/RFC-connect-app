@@ -11,6 +11,14 @@ struct SettingsView: View {
     @State private var passwordError = ""
     @State private var passwordSuccess = false
 
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+    }
+
+    private var appBuild: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -69,15 +77,19 @@ struct SettingsView: View {
 
                     // About
                     Section("About") {
+                        Text("RFC Mentor Connect pairs fertility patients with peer mentors for private, clinic-managed support throughout your treatment journey.")
+                            .font(.footnote)
+                            .foregroundColor(Color(hex: "444444"))
+                            .padding(.vertical, 4)
                         HStack {
                             Label("Version", systemImage: "info.circle")
                             Spacer()
-                            Text("1.0.0").foregroundColor(Color(hex: "666666"))
+                            Text(appVersion).foregroundColor(Color(hex: "666666"))
                         }
                         HStack {
                             Label("Build", systemImage: "hammer")
                             Spacer()
-                            Text("RFC Mentor Connect").foregroundColor(Color(hex: "666666"))
+                            Text(appBuild).foregroundColor(Color(hex: "666666"))
                         }
                     }
 

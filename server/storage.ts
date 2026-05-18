@@ -22,6 +22,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getUsersByRole(role: string): Promise<User[]>;
   updateUser(id: number, data: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number, reassignAssignedBy: number): Promise<void>;
 
   createAssignment(assignment: InsertMentorAssignment): Promise<MentorAssignment>;
   getAssignmentsByMentor(mentorId: number): Promise<MentorAssignment[]>;
@@ -93,6 +94,75 @@ export class DatabaseStorage implements IStorage {
   async updateUser(id: number, data: Partial<InsertUser>): Promise<User | undefined> {
     const [updated] = await db.update(users).set(data).where(eq(users.id, id)).returning();
     return updated;
+  }
+
+  async deleteUser(id: number, reassignAssignedBy: number): Promise<void> {
+    await db.transaction(async (tx) => {
+      // Messages involving this user — collect ids so we can clean up dependents
+      const userMessages = await tx
+        .select({ id: messages.id })
+        .from(messages)
+        .where(or(eq(messages.senderId, id), eq(messages.receiverId, id)));
+      const messageIds = userMessages.map(m => m.id);
+
+      // Reports: by this user, or referencing messages we're about to delete
+      await tx.delete(reports).where(eq(reports.reportedBy, id));
+      if (messageIds.length > 0) {
+        await tx.delete(reports).where(inArray(reports.messageId, messageIds));
+        await tx.delete(chatAttachments).where(inArray(chatAttachments.messageId, messageIds));
+        await tx.delete(messages).where(inArray(messages.id, messageIds));
+      }
+
+      // Mentor assignments involving this user (mentor or patient)
+      const userAssignments = await tx
+        .select({ id: mentorAssignments.id })
+        .from(mentorAssignments)
+        .where(
+          or(eq(mentorAssignments.mentorId, id), eq(mentorAssignments.patientId, id)),
+        );
+      const assignmentIds = userAssignments.map(a => a.id);
+
+      // Video calls: initiated by this user, or for assignments being deleted
+      await tx.delete(videoCalls).where(eq(videoCalls.initiatedBy, id));
+      if (assignmentIds.length > 0) {
+        await tx.delete(videoCalls).where(inArray(videoCalls.assignmentId, assignmentIds));
+      }
+
+      // Mentor assignments where this user is mentor or patient
+      await tx.delete(mentorAssignments).where(
+        or(eq(mentorAssignments.mentorId, id), eq(mentorAssignments.patientId, id)),
+      );
+
+      // Assignments this user (admin) created for others — reassign to current admin
+      await tx
+        .update(mentorAssignments)
+        .set({ assignedBy: reassignAssignedBy })
+        .where(eq(mentorAssignments.assignedBy, id));
+
+      // Patient phase rows
+      await tx.delete(patientPhases).where(eq(patientPhases.patientId, id));
+      await tx
+        .update(patientPhases)
+        .set({ lastUpdatedBy: null })
+        .where(eq(patientPhases.lastUpdatedBy, id));
+
+      // Resources authored by this user — keep the resource, drop the author
+      await tx
+        .update(resources)
+        .set({ createdBy: null })
+        .where(eq(resources.createdBy, id));
+
+      // Refresh tokens and notifications
+      await tx.delete(refreshTokens).where(eq(refreshTokens.userId, id));
+      await tx.delete(notifications).where(eq(notifications.userId, id));
+
+      // Audit log: nullify references where this user was the target, remove rows where actor
+      await tx.update(auditLog).set({ targetId: null }).where(eq(auditLog.targetId, id));
+      await tx.delete(auditLog).where(eq(auditLog.actorId, id));
+
+      // Finally the user row itself
+      await tx.delete(users).where(eq(users.id, id));
+    });
   }
 
   async createAssignment(assignment: InsertMentorAssignment): Promise<MentorAssignment> {

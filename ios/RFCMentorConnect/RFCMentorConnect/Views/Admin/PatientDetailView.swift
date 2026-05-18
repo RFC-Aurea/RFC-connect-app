@@ -133,7 +133,7 @@ struct PatientDetailView: View {
                         }
 
                         Button(action: { showDeleteConfirm = true }) {
-                            Text("Deactivate Account")
+                            Text("Delete Account")
                                 .font(.subheadline.bold())
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 44)
@@ -159,11 +159,11 @@ struct PatientDetailView: View {
             } message: {
                 Text(successMessage)
             }
-            .alert("Deactivate Account", isPresented: $showDeleteConfirm) {
-                Button("Deactivate", role: .destructive) { deleteAccount() }
+            .alert("Delete Account", isPresented: $showDeleteConfirm) {
+                Button("Delete", role: .destructive) { deleteAccount() }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Are you sure you want to deactivate \(patient.name)'s account? This cannot be undone.")
+                Text("Are you sure you want to delete \(patient.name)'s account? This cannot be undone.")
             }
         }
     }
