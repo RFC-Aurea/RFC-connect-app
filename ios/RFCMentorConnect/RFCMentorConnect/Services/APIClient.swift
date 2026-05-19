@@ -269,17 +269,21 @@ final class APIClient {
 
     // MARK: - Video Calls
 
-    func startVideoCall() async throws -> VideoCallStartResponse {
-        let data = try await requestWithRetry("/api/video-calls/start", method: "POST")
+    func startVideoCall(partnerId: Int) async throws -> VideoCallStartResponse {
+        let data = try await requestWithRetry(
+            "/api/video-calls/start",
+            method: "POST",
+            body: ["partnerId": partnerId],
+        )
         return try decode(VideoCallStartResponse.self, from: data)
     }
 
-    func scheduleVideoCall(scheduledAt: Date) async throws -> VideoCallScheduleResponse {
+    func scheduleVideoCall(partnerId: Int, scheduledAt: Date) async throws -> VideoCallScheduleResponse {
         let iso = ISO8601DateFormatter().string(from: scheduledAt)
         let data = try await requestWithRetry(
             "/api/video-calls/schedule",
             method: "POST",
-            body: ["scheduledAt": iso],
+            body: ["partnerId": partnerId, "scheduledAt": iso],
         )
         return try decode(VideoCallScheduleResponse.self, from: data)
     }

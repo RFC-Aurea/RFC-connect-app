@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ScheduleCallView: View {
+    let partnerId: Int
+
     @Environment(\.dismiss) private var dismiss
 
     @State private var scheduledDate = Date().addingTimeInterval(60 * 60)
@@ -119,7 +121,7 @@ struct ScheduleCallView: View {
         isSubmitting = true
         Task {
             do {
-                _ = try await APIClient.shared.scheduleVideoCall(scheduledAt: scheduledDate)
+                _ = try await APIClient.shared.scheduleVideoCall(partnerId: partnerId, scheduledAt: scheduledDate)
                 await MainActor.run {
                     confirmedTime = scheduledDate
                     isSubmitting = false

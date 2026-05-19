@@ -337,6 +337,7 @@ export async function registerRoutes(
         res.status(400).json({ message: "deviceToken is required" });
         return;
       }
+      await storage.clearDeviceTokenFromOtherUsers(deviceToken, req.user!.id);
       await storage.updateUser(req.user!.id, { apnsDeviceToken: deviceToken });
       res.json({ success: true });
     } catch (err) { next(err); }
@@ -989,6 +990,17 @@ export async function registerRoutes(
     return assignments[0];
   }
 
+  async function getAssignmentBetween(userId: number, partnerId: number, role: "patient" | "mentor") {
+    const assignments = role === "patient"
+      ? await storage.getAssignmentsByPatient(userId)
+      : await storage.getAssignmentsByMentor(userId);
+    return assignments.find(a =>
+      role === "patient"
+        ? a.patientId === userId && a.mentorId === partnerId
+        : a.mentorId === userId && a.patientId === partnerId
+    );
+  }
+
   async function userInAssignment(userId: number, assignmentId: number): Promise<boolean> {
     const all = await storage.getAllAssignments();
     return all.some(a => a.id === assignmentId && (a.mentorId === userId || a.patientId === userId));
@@ -1003,13 +1015,17 @@ export async function registerRoutes(
         return res.status(503).json({ message: "Video calling is not configured" });
       }
 
-      const role = req.user!.role as "patient" | "mentor";
-      const assignment = await getAssignmentForUser(req.user!.id, role);
-      if (!assignment) {
-        return res.status(400).json({ message: "No active mentor assignment" });
+      const { partnerId } = req.body as { partnerId?: number };
+      if (typeof partnerId !== "number") {
+        return res.status(400).json({ message: "partnerId is required" });
       }
 
-      const partnerId = role === "patient" ? assignment.mentorId : assignment.patientId;
+      const role = req.user!.role as "patient" | "mentor";
+      const assignment = await getAssignmentBetween(req.user!.id, partnerId, role);
+      if (!assignment) {
+        return res.status(400).json({ message: "No active assignment with this partner" });
+      }
+
       const partner = await storage.getUser(partnerId);
       const caller = await storage.getUser(req.user!.id);
       if (!partner || !caller) {
@@ -1065,9 +1081,12 @@ export async function registerRoutes(
         return res.status(503).json({ message: "Video calling is not configured" });
       }
 
-      const { scheduledAt } = req.body as { scheduledAt?: string };
+      const { scheduledAt, partnerId } = req.body as { scheduledAt?: string; partnerId?: number };
       if (!scheduledAt) {
         return res.status(400).json({ message: "scheduledAt is required" });
+      }
+      if (typeof partnerId !== "number") {
+        return res.status(400).json({ message: "partnerId is required" });
       }
       const scheduledDate = new Date(scheduledAt);
       if (isNaN(scheduledDate.getTime())) {
@@ -1078,12 +1097,11 @@ export async function registerRoutes(
       }
 
       const role = req.user!.role as "patient" | "mentor";
-      const assignment = await getAssignmentForUser(req.user!.id, role);
+      const assignment = await getAssignmentBetween(req.user!.id, partnerId, role);
       if (!assignment) {
-        return res.status(400).json({ message: "No active mentor assignment" });
+        return res.status(400).json({ message: "No active assignment with this partner" });
       }
 
-      const partnerId = role === "patient" ? assignment.mentorId : assignment.patientId;
       const partner = await storage.getUser(partnerId);
       const caller = await storage.getUser(req.user!.id);
       if (!partner || !caller) {

@@ -67,6 +67,8 @@ struct ContentView: View {
     /// Unified incoming-call source — either from socket (foreground) or
     /// from a tapped push notification (background).
     private var currentIncomingCall: IncomingVideoCall? {
+        // Admins never receive video call invitations.
+        if auth.currentUser?.role == .admin { return nil }
         if let socketCall = socketService.incomingCall { return socketCall }
         if let pushCall = pushService.pendingIncomingCall {
             return IncomingVideoCall(

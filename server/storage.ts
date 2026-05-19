@@ -23,6 +23,7 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getUsersByRole(role: string): Promise<User[]>;
   updateUser(id: number, data: Partial<InsertUser>): Promise<User | undefined>;
+  clearDeviceTokenFromOtherUsers(token: string, currentUserId: number): Promise<void>;
   deleteUser(id: number, reassignAssignedBy: number): Promise<void>;
 
   createAssignment(assignment: InsertMentorAssignment): Promise<MentorAssignment>;
@@ -102,6 +103,13 @@ export class DatabaseStorage implements IStorage {
   async updateUser(id: number, data: Partial<InsertUser>): Promise<User | undefined> {
     const [updated] = await db.update(users).set(data).where(eq(users.id, id)).returning();
     return updated;
+  }
+
+  async clearDeviceTokenFromOtherUsers(token: string, currentUserId: number): Promise<void> {
+    await db
+      .update(users)
+      .set({ apnsDeviceToken: null })
+      .where(and(eq(users.apnsDeviceToken, token), sql`${users.id} <> ${currentUserId}`));
   }
 
   async deleteUser(id: number, reassignAssignedBy: number): Promise<void> {

@@ -112,7 +112,7 @@ struct ChatView: View {
                 Button("Cancel", role: .cancel) {}
             }
             .sheet(isPresented: $showScheduleSheet) {
-                ScheduleCallView()
+                ScheduleCallView(partnerId: partnerId)
             }
             .fullScreenCover(item: $activeVideoCall) { call in
                 VideoCallView(videoCallId: call.id, roomUrl: call.roomUrl)
@@ -425,7 +425,7 @@ struct ChatView: View {
         startingCall = true
         defer { startingCall = false }
         do {
-            let resp = try await APIClient.shared.startVideoCall()
+            let resp = try await APIClient.shared.startVideoCall(partnerId: partnerId)
             activeVideoCall = ActiveVideoCall(id: resp.videoCallId, roomUrl: resp.roomUrl)
         } catch {
             videoCallError = "Couldn't start the call: \(error.localizedDescription)"
